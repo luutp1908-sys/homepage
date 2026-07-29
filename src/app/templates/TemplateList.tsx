@@ -36,8 +36,15 @@ export default async function TemplateList({ searchParams }: Props) {
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 p-6">
       {items.map((t) => (
         <article key={t.id} className="rounded border p-4 bg-white shadow-sm">
-          <h3 className="text-lg font-semibold">{t.title}</h3>
-          <p className="text-sm text-zinc-600">{t.slug}</p>
+          <a
+            href={`http://localhost:5174?templateId=${encodeURIComponent(t.id)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block"
+          >
+            <h3 className="text-lg font-semibold">{t.title}</h3>
+            <p className="text-sm text-zinc-600">{t.slug}</p>
+          </a>
         </article>
       ))}
     </div>
