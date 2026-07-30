@@ -11,18 +11,47 @@ type Props = {
 };
 
 export default async function TemplateList({ searchParams }: Props) {
+  const paramsResolved = searchParams && typeof (searchParams as any).then === 'function' ? await (searchParams as any) : (searchParams ?? {});
   const qp = new URLSearchParams();
-  if (searchParams) {
-    for (const [k, v] of Object.entries(searchParams)) {
+  if (paramsResolved) {
+    for (const [k, v] of Object.entries(paramsResolved)) {
       if (!v) continue;
+      if (k === 'categorySlug') continue;
       if (Array.isArray(v)) v.forEach((x) => qp.append(k, x));
       else qp.set(k, String(v));
     }
   }
 
-  const res = await fetch(`${process.env.BE_URL ?? 'http://localhost:3000'}/api/templates?${qp.toString()}`, { cache: 'no-store' });
+  // If caller passed categorySlug instead of categoryId, attempt to resolve it to an id
+  if (!qp.get('categoryId') && paramsResolved?.categorySlug) {
+    const slug = Array.isArray(paramsResolved.categorySlug) ? paramsResolved.categorySlug[0] : String(paramsResolved.categorySlug);
+    try {
+      const base = process.env.NEXT_PUBLIC_BASE_URL ?? process.env.BE_URL ?? 'http://localhost:3000';
+      const catUrl = base.replace(/\/+$/, '') + `/api/categories`;
+      const catRes = await fetch(catUrl, { cache: 'no-store' });
+      if (catRes.ok) {
+        const catPayload = await catRes.json();
+        const cats = Array.isArray(catPayload) ? catPayload : catPayload?.data ?? catPayload?.items ?? [];
+        const found = Array.isArray(cats) ? cats.find((x: any) => x.slug === slug) : undefined;
+        if (found?.id) qp.set('categoryId', String(found.id));
+      }
+    } catch (e) {
+      // ignore resolution failures and continue without categoryId
+    }
+  }
+
+  // Backend DTO does not accept categorySlug; keep it frontend-only.
+  qp.delete('categorySlug');
+
+  const apiPath = `/api/templates${qp.toString() ? `?${qp.toString()}` : ''}`;
+  const base = process.env.NEXT_PUBLIC_BASE_URL ?? process.env.BE_URL ?? 'http://localhost:3000';
+  const url = base.replace(/\/+$/, '') + apiPath;
+  const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) {
-    return <div className="text-red-600">Failed to load templates ({res.status})</div>;
+    const text = await res.text().catch(() => '');
+    return (
+      <div className="text-red-600">Failed to load templates ({res.status}){text ? `: ${text}` : ''}</div>
+    );
   }
 
   const payload = await res.json();

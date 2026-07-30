@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import TemplateList from './templates/TemplateList';
 import FilterControls from './templates/FilterControls';
+import Categories from './templates/Categories';
 
 export default async function Home({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
   return (
@@ -10,6 +11,8 @@ export default async function Home({ searchParams }: { searchParams?: { [key: st
           <h1 className="text-2xl font-semibold mb-2">Templates</h1>
           <p className="text-sm text-zinc-600 mb-4">Browse available templates (server-side rendered).</p>
         </div>
+
+        <Categories searchParams={searchParams} />
 
         <FilterControls />
 
