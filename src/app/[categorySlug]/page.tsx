@@ -1,10 +1,28 @@
+import type { Metadata } from 'next';
 import TemplateList from '../templates/TemplateList';
 import FilterControls from '../templates/FilterControls';
 import Categories from '../templates/Categories';
+import { buildSeoMetadata, fetchCategories, resolveMaybePromise } from '../lib/seo';
 
-export default async function CategoryPage({ params, searchParams }: { params: { categorySlug: string }, searchParams?: { [key: string]: string | string[] | undefined } }) {
-  const paramsValue = params && typeof (params as any).then === 'function' ? await (params as any) : params;
-  const paramsResolved = searchParams && typeof (searchParams as any).then === 'function' ? await (searchParams as any) : (searchParams ?? {});
+type PageParams = { categorySlug: string };
+type SearchParams = { [key: string]: string | string[] | undefined };
+
+export async function generateMetadata({ params }: { params: PageParams | Promise<PageParams> }): Promise<Metadata> {
+  const paramsValue = await resolveMaybePromise(params);
+  const categories = await fetchCategories();
+  const category = categories.find((item: any) => item.slug === paramsValue.categorySlug);
+
+  return buildSeoMetadata({
+    fallbackTitle: `${category?.name ?? paramsValue.categorySlug} Templates`,
+    fallbackDescription: `Browse ${category?.name ?? paramsValue.categorySlug} templates for your next design project.`,
+    path: `/${encodeURIComponent(paramsValue.categorySlug)}`,
+    seo: category?.seo ?? null,
+  });
+}
+
+export default async function CategoryPage({ params, searchParams }: { params: PageParams | Promise<PageParams>, searchParams?: SearchParams | Promise<SearchParams> }) {
+  const paramsValue = await resolveMaybePromise(params);
+  const paramsResolved = await resolveMaybePromise(searchParams ?? {});
   const merged = { ...(paramsResolved ?? {}), categorySlug: paramsValue.categorySlug } as { [key: string]: string | string[] | undefined };
 
   return (
@@ -17,7 +35,6 @@ export default async function CategoryPage({ params, searchParams }: { params: {
 
         <Categories searchParams={merged} />
         <FilterControls />
-        {/* @ts-expect-error Server Component */}
         <TemplateList searchParams={merged} />
       </main>
     </div>
