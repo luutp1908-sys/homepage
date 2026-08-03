@@ -31,7 +31,20 @@ This app integrates with backend (be) in two ways.
 
 2. Next.js server proxy routes under src/app/api/*:
    - Forward to backend using BE_URL (fallback http://localhost:4000)
-   - Common proxied resources: user, categories, templates
+    - Common proxied resources: user, categories, templates, user drafts
+
+## Workspaces Feature (Implemented)
+- Route: /workspaces
+- Purpose: list draft workspaces owned by the logged-in user
+- Data source chain:
+   - Client page calls /api/user-drafts with Authorization header from session token
+   - Homepage API proxy forwards to backend /api/v1/user-draft
+- Supported list controls:
+   - Pagination (page, pageSize)
+   - Sorting by updatedAt/createdAt
+- Current scope:
+   - Summary list only (name, ids, timestamps)
+   - Full draft content JSON is not rendered in this page
 
 ## Important Environment Variables
 - NEXT_PUBLIC_BE_API_BASE: browser-visible backend base URL

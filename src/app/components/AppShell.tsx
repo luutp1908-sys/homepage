@@ -2,11 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-
-function getAuthHeaders() {
-  const token = typeof window !== 'undefined' ? window.sessionStorage.getItem('homepage_access_token') : null;
-  return token ? { Authorization: `Bearer ${token}` } : undefined;
-}
+import { getAuthHeaders } from '../../shared/auth/getAuthHeaders';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -35,7 +31,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {!loading && isAuthenticated ? (
         <aside className="fixed left-0 top-0 z-40 flex h-screen w-20 flex-col items-center border-r border-zinc-200 bg-white py-4 shadow-sm">
           <Link
-            href="/"
+            href="/workspaces"
             title="Workspace"
             aria-label="Workspace"
             className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 text-zinc-700 transition-colors hover:bg-zinc-200"

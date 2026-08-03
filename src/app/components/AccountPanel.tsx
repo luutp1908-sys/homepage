@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getAuthHeaders } from '../../shared/auth/getAuthHeaders';
 
 type Profile = {
   id?: string;
@@ -13,11 +14,6 @@ type PasswordPayload = {
   currentPassword: string;
   newPassword: string;
 };
-
-function getAuthHeaders() {
-  const token = typeof window !== 'undefined' ? window.sessionStorage.getItem('homepage_access_token') : null;
-  return token ? { Authorization: `Bearer ${token}` } : undefined;
-}
 
 export default function AccountPanel() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -110,7 +106,7 @@ export default function AccountPanel() {
   if (loading) {
     return <div className="p-8">Loading account...</div>;
   }
-  console.log('profile', profile)
+
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-8 p-8">
       <div>

@@ -1,11 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-
-function getAuthHeaders() {
-  const token = typeof window !== 'undefined' ? window.sessionStorage.getItem('homepage_access_token') : null;
-  return token ? { Authorization: `Bearer ${token}` } : undefined;
-}
+import { getAuthHeaders } from '../../shared/auth/getAuthHeaders';
 
 export default function AuthNav() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
