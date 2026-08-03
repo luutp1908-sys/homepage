@@ -1,0 +1,93 @@
+export type WorkspaceType = 'PERSONAL' | 'TEAM';
+
+export type WorkspaceSummary = {
+  id: string;
+  name: string;
+  slug: string;
+  type: WorkspaceType;
+  description: string | null;
+  avatarUrl: string | null;
+  isArchived: boolean;
+  deletedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateWorkspacePayload = {
+  name: string;
+  type: WorkspaceType;
+  description?: string;
+};
+
+type ApiEnvelope<T> = {
+  success: boolean;
+  data: T;
+  timestamp: string;
+};
+
+function toIsoString(value: unknown) {
+  if (typeof value === 'string') return value;
+  return new Date(value as string | number | Date | undefined ?? Date.now()).toISOString();
+}
+
+function normalizeWorkspace(item: any): WorkspaceSummary {
+  const type: WorkspaceType = item?.type === 'TEAM' ? 'TEAM' : 'PERSONAL';
+
+  return {
+    id: String(item?.id ?? ''),
+    name: typeof item?.name === 'string' && item.name.trim().length > 0 ? item.name : 'Untitled workspace',
+    slug: typeof item?.slug === 'string' ? item.slug : '',
+    type,
+    description: typeof item?.description === 'string' ? item.description : null,
+    avatarUrl: typeof item?.avatarUrl === 'string' ? item.avatarUrl : null,
+    isArchived: Boolean(item?.isArchived),
+    deletedAt: typeof item?.deletedAt === 'string' ? item.deletedAt : null,
+    createdAt: toIsoString(item?.createdAt),
+    updatedAt: toIsoString(item?.updatedAt),
+  };
+}
+
+function resolveData<T>(payload: ApiEnvelope<T> | T) {
+  const maybeEnvelope = payload as ApiEnvelope<T>;
+  if (maybeEnvelope && typeof maybeEnvelope === 'object' && 'data' in maybeEnvelope) {
+    return maybeEnvelope.data;
+  }
+  return payload as T;
+}
+
+export async function createWorkspace(payload: CreateWorkspacePayload, headers?: Record<string, string>) {
+  const response = await fetch('/api/workspaces', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      ...(headers || {}),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(text || `Failed to create workspace (${response.status})`);
+  }
+
+  const body = (await response.json()) as ApiEnvelope<any> | any;
+  const data = resolveData<any>(body);
+  return normalizeWorkspace(data);
+}
+
+export async function fetchWorkspaces(headers?: Record<string, string>) {
+  const response = await fetch('/api/workspaces', {
+    cache: 'no-store',
+    headers,
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(text || `Failed to load workspaces (${response.status})`);
+  }
+
+  const body = (await response.json()) as ApiEnvelope<any> | any;
+  const data = resolveData<any>(body);
+  const items = Array.isArray(data) ? data : [];
+  return items.map(normalizeWorkspace);
+}

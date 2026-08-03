@@ -2,8 +2,11 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getAuthHeaders } from '../../shared/auth/getAuthHeaders';
-import { DraftSortBy, DraftSortOrder, UserDraftSummary, fetchUserDrafts } from '../../shared/workspaces/userDrafts';
+import CreateWorkspaceModal from './CreateWorkspaceModal';
+import { CreateWorkspacePayload, createWorkspace } from '../../shared/workspaces/workspaces';
+import { DraftSortBy, DraftSortOrder, fetchUserDrafts } from '../../shared/workspaces/userDrafts';
 
 type SortOption = 'updatedAt-desc' | 'createdAt-desc' | 'createdAt-asc';
 
@@ -28,66 +31,124 @@ function resolveSort(value: SortOption): { sortBy: DraftSortBy; sortOrder: Draft
   return { sortBy: 'updatedAt', sortOrder: 'desc' };
 }
 
-export default function WorkspacesPageClient() {
-  const [items, setItems] = useState<UserDraftSummary[]>([]);
-  const [total, setTotal] = useState(0);
+async function fetchDraftPage(page: number, sortOption: SortOption) {
+  const { sortBy, sortOrder } = resolveSort(sortOption);
+  return fetchUserDrafts(
+    {
+      page,
+      pageSize: PAGE_SIZE,
+      sortBy,
+      sortOrder,
+    },
+    getAuthHeaders(),
+  );
+}
+
+type UserDraftPage = Awaited<ReturnType<typeof fetchDraftPage>>;
+type UserDraftItem = UserDraftPage['items'][number];
+
+function WorkspacesPageClientContent() {
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [sortOption, setSortOption] = useState<SortOption>('updatedAt-desc');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isUnauthorized, setIsUnauthorized] = useState(false);
+  const [hasCreateUnauthorized, setHasCreateUnauthorized] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createSuccess, setCreateSuccess] = useState<string | null>(null);
+
+  const draftsQuery = useQuery({
+    queryKey: ['user-drafts', page, sortOption],
+    queryFn: () => fetchDraftPage(page, sortOption),
+  });
+
+  const items = (draftsQuery.data as UserDraftPage | undefined)?.items ?? [];
+  const total = draftsQuery.data?.total ?? 0;
+  const queryError = draftsQuery.error as Error | null;
+  const error = queryError?.message ?? null;
+  const queryUnauthorized = Boolean(error && error.includes('401'));
+  const isUnauthorized = hasCreateUnauthorized || queryUnauthorized;
+  const isLoading = draftsQuery.isLoading;
+
+  const createWorkspaceMutation = useMutation({
+    mutationFn: async (payload: CreateWorkspacePayload) => {
+      const headers = getAuthHeaders();
+      if (!headers) {
+        throw new Error('You need to sign in before creating a workspace.');
+      }
+
+      return createWorkspace(payload, headers);
+    },
+    onMutate: () => {
+      setCreateError(null);
+    },
+    onSuccess: async (created) => {
+      setCreateSuccess(`Workspace "${created.name}" created successfully.`);
+      setIsCreateModalOpen(false);
+      await queryClient.invalidateQueries({ queryKey: ['user-drafts'] });
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Failed to create workspace';
+      if (message.includes('401')) {
+        setHasCreateUnauthorized(true);
+      }
+      setCreateError(message);
+    },
+  });
+
+  const isCreatingWorkspace = createWorkspaceMutation.isPending;
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);
   const editorBase = (process.env.NEXT_PUBLIC_EDITOR_APP_URL || 'http://localhost:5174').replace(/\/+$/, '');
+  const showUnauthorized = isUnauthorized;
+  const showError = !isUnauthorized && Boolean(error);
+  const showEmpty = !isLoading && !error && items.length === 0;
+  const showList = !isLoading && !error && items.length > 0;
 
   const getDraftEditorUrl = (draftId: string) => {
     return `${editorBase}/draft/${encodeURIComponent(draftId)}`;
   };
 
-  useEffect(() => {
-    let cancelled = false;
+  const openCreateModal = () => {
+    setCreateError(null);
+    setCreateSuccess(null);
+    setIsCreateModalOpen(true);
+  };
 
-    const run = async () => {
-      setIsLoading(true);
-      setError(null);
-      setIsUnauthorized(false);
+  const closeCreateModal = () => {
+    if (!isCreatingWorkspace) {
+      setIsCreateModalOpen(false);
+    }
+  };
 
-      const { sortBy, sortOrder } = resolveSort(sortOption);
+  const handleSortChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSortOption(event.target.value as SortOption);
+    setPage(1);
+  };
 
-      try {
-        const result = await fetchUserDrafts(
-          {
-            page,
-            pageSize: PAGE_SIZE,
-            sortBy,
-            sortOrder,
-          },
-          getAuthHeaders(),
-        );
+  const submitCreateModal = async (payload: CreateWorkspacePayload) => {
+    await createWorkspaceMutation.mutateAsync(payload);
+  };
 
-        if (cancelled) return;
-        setItems(result.items);
-        setTotal(result.total);
-      } catch (err: any) {
-        if (cancelled) return;
-        const message = typeof err?.message === 'string' ? err.message : 'Failed to load drafts';
-        if (message.includes('401')) {
-          setIsUnauthorized(true);
-        }
-        setError(message);
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    };
+  const renderDraftCard = (item: UserDraftItem) => (
+    <article key={item.id} className="rounded border border-zinc-200 bg-white shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50">
+      <a href={getDraftEditorUrl(item.id)} target="_blank" rel="noopener noreferrer" className="block cursor-pointer p-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="min-w-0">
+            <h3 className="truncate text-base font-semibold text-zinc-900">{item.name}</h3>
+            <p className="mt-1 text-xs text-zinc-500">Draft ID: {item.id}</p>
+            <p className="mt-1 text-xs text-zinc-500">Template ID: {item.templateId ?? 'N/A'}</p>
+            <p className="mt-2 text-xs font-medium text-zinc-700">Open in editor</p>
+          </div>
 
-    run();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [page, sortOption]);
+          <div className="grid grid-cols-1 gap-1 text-xs text-zinc-600 md:text-right">
+            <p>Updated: {formatDate(item.updatedAt)}</p>
+            <p>Created: {formatDate(item.createdAt)}</p>
+            <p>Last opened: {formatDate(item.lastOpenedAt)}</p>
+          </div>
+        </div>
+      </a>
+    </article>
+  );
 
   useEffect(() => {
     if (page > totalPages) {
@@ -104,24 +165,36 @@ export default function WorkspacesPageClient() {
             <p className="mt-1 text-sm text-zinc-600">Your draft templates, sorted by recent activity.</p>
           </div>
 
-          <label className="text-sm font-medium text-zinc-700">
-            Sort by
-            <select
-              className="mt-1 block w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm"
-              value={sortOption}
-              onChange={(event) => {
-                setSortOption(event.target.value as SortOption);
-                setPage(1);
-              }}
+          <div className="flex flex-col gap-3 md:items-end">
+            <button
+              type="button"
+              className="rounded bg-black px-4 py-2 text-sm text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={openCreateModal}
+              disabled={isUnauthorized || isCreatingWorkspace}
             >
-              <option value="updatedAt-desc">Last updated (newest)</option>
-              <option value="createdAt-desc">Created (newest)</option>
-              <option value="createdAt-asc">Created (oldest)</option>
-            </select>
-          </label>
+              New workspace
+            </button>
+
+            <label className="text-sm font-medium text-zinc-700">
+              Sort by
+              <select
+                className="mt-1 block w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm"
+                value={sortOption}
+                onChange={handleSortChange}
+              >
+                <option value="updatedAt-desc">Last updated (newest)</option>
+                <option value="createdAt-desc">Created (newest)</option>
+                <option value="createdAt-asc">Created (oldest)</option>
+              </select>
+            </label>
+          </div>
         </div>
 
-        {isUnauthorized ? (
+        {createSuccess ? (
+          <div className="mb-4 rounded border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{createSuccess}</div>
+        ) : null}
+
+        {showUnauthorized ? (
           <div className="rounded border border-amber-200 bg-amber-50 p-4 text-amber-800">
             <p className="text-sm">You need to sign in to view your workspaces.</p>
             <Link href="/login" className="mt-3 inline-block rounded bg-black px-4 py-2 text-sm text-white hover:bg-zinc-800">
@@ -130,7 +203,7 @@ export default function WorkspacesPageClient() {
           </div>
         ) : null}
 
-        {!isUnauthorized && error ? (
+        {showError ? (
           <div className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
         ) : null}
 
@@ -140,40 +213,16 @@ export default function WorkspacesPageClient() {
           </div>
         ) : null}
 
-        {!isLoading && !error && items.length === 0 ? (
+        {showEmpty ? (
           <div className="rounded border border-zinc-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-medium">No drafts yet</h2>
             <p className="mt-1 text-sm text-zinc-600">Create or edit a template to see your draft workspaces here.</p>
           </div>
         ) : null}
 
-        {!isLoading && !error && items.length > 0 ? (
+        {showList ? (
           <div className="space-y-3">
-            {items.map((item) => (
-              <article key={item.id} className="rounded border border-zinc-200 bg-white shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50">
-                <a
-                  href={getDraftEditorUrl(item.id)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block cursor-pointer p-4"
-                >
-                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <div className="min-w-0">
-                      <h3 className="truncate text-base font-semibold text-zinc-900">{item.name}</h3>
-                      <p className="mt-1 text-xs text-zinc-500">Draft ID: {item.id}</p>
-                      <p className="mt-1 text-xs text-zinc-500">Template ID: {item.templateId ?? 'N/A'}</p>
-                      <p className="mt-2 text-xs font-medium text-zinc-700">Open in editor</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-1 text-xs text-zinc-600 md:text-right">
-                      <p>Updated: {formatDate(item.updatedAt)}</p>
-                      <p>Created: {formatDate(item.createdAt)}</p>
-                      <p>Last opened: {formatDate(item.lastOpenedAt)}</p>
-                    </div>
-                  </div>
-                </a>
-              </article>
-            ))}
+            {items.map(renderDraftCard)}
 
             <div className="mt-4 flex items-center justify-between rounded border border-zinc-200 bg-white px-4 py-3 text-sm shadow-sm">
               <p className="text-zinc-600">
@@ -201,6 +250,16 @@ export default function WorkspacesPageClient() {
           </div>
         ) : null}
       </main>
+
+      <CreateWorkspaceModal
+        open={isCreateModalOpen}
+        isSubmitting={isCreatingWorkspace}
+        errorMessage={createError}
+        onClose={closeCreateModal}
+        onSubmit={submitCreateModal}
+      />
     </div>
   );
 }
+
+export default WorkspacesPageClientContent

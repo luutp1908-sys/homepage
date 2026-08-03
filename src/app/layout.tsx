@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import AuthNav from "./components/AuthNav";
 import AppShell from "./components/AppShell";
+import Providers from "./providers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,18 +31,20 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        <AppShell>
-          <header className="border-b border-zinc-200 bg-white">
-            <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-              <a href="/" className="text-sm font-semibold">Templates</a>
-              <nav className="flex items-center gap-4 text-sm text-zinc-600">
-                <a href="/" className="hover:text-black">Browse</a>
-                <AuthNav />
-              </nav>
-            </div>
-          </header>
-          {children}
-        </AppShell>
+        <Providers>
+          <AppShell>
+            <header className="border-b border-zinc-200 bg-white">
+              <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+                <a href="/" className="text-sm font-semibold">Templates</a>
+                <nav className="flex items-center gap-4 text-sm text-zinc-600">
+                  <a href="/" className="hover:text-black">Browse</a>
+                  <AuthNav />
+                </nav>
+              </div>
+            </header>
+            {children}
+          </AppShell>
+        </Providers>
       </body>
     </html>
   );
