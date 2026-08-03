@@ -29,8 +29,13 @@ export default function AuthNav() {
   return isAuthenticated ? (
     <a href="/account" className="hover:text-black">Account</a>
   ) : (
-    <a href="/login" className="rounded bg-black px-3 py-1.5 text-sm text-white hover:bg-zinc-800">
-      Sign in
-    </a>
+    <div className="flex items-center gap-2">
+      <a href="/register" className="rounded border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100">
+        Sign up
+      </a>
+      <a href="/login" className="rounded bg-black px-3 py-1.5 text-sm text-white hover:bg-zinc-800">
+        Sign in
+      </a>
+    </div>
   );
 }
