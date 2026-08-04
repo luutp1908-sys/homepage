@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import AuthNav from "./components/AuthNav";
 import AppShell from "./components/AppShell";
+import BrowseLink from "./components/BrowseLink";
 import Providers from "./providers";
 import "./globals.css";
 
@@ -35,9 +36,9 @@ export default function RootLayout({
           <AppShell>
             <header className="border-b border-zinc-200 bg-white">
               <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-                <a href="/" className="text-sm font-semibold">Templates</a>
+                <BrowseLink className="text-sm font-semibold">Templates</BrowseLink>
                 <nav className="flex items-center gap-4 text-sm text-zinc-600">
-                  <a href="/" className="hover:text-black">Browse</a>
+                  <BrowseLink className="hover:text-black">Browse</BrowseLink>
                   <AuthNav />
                 </nav>
               </div>

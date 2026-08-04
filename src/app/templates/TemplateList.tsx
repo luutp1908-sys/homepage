@@ -1,4 +1,6 @@
 import React from 'react';
+import { cookies } from 'next/headers';
+import { ACTIVE_WORKSPACE_STORAGE_KEY } from '../../shared/workspaces/constants';
 
 type TemplateItem = {
   id: string;
@@ -12,11 +14,14 @@ type Props = {
 
 export default async function TemplateList({ searchParams }: Props) {
   const paramsResolved = searchParams && typeof (searchParams as any).then === 'function' ? await (searchParams as any) : (searchParams ?? {});
+  const cookieStore = await cookies();
+  const workspaceId = cookieStore.get(ACTIVE_WORKSPACE_STORAGE_KEY)?.value;
   const qp = new URLSearchParams();
   if (paramsResolved) {
     for (const [k, v] of Object.entries(paramsResolved)) {
       if (!v) continue;
       if (k === 'categorySlug') continue;
+      if (k === 'workspaceId') continue;
       if (Array.isArray(v)) v.forEach((x) => qp.append(k, x));
       else qp.set(k, String(v));
     }
@@ -55,18 +60,28 @@ export default async function TemplateList({ searchParams }: Props) {
   }
 
   const payload = await res.json();
-  const items: TemplateItem[] = payload?.data?.items
+  const items: TemplateItem[] = payload?.data?.items ?? payload?.items ?? [];
 
   if (!items || items.length === 0) {
     return <div className="p-6">No templates found.</div>;
   }
 
+  const editorBase = (process.env.NEXT_PUBLIC_EDITOR_APP_URL || 'http://localhost:5174').replace(/\/+$/, '');
+
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 p-6">
       {items.map((t) => (
         <article key={t.id} className="rounded border p-4 bg-white shadow-sm">
+          {(() => {
+            const editorQuery = new URLSearchParams({ templateId: String(t.id) });
+            if (workspaceId) {
+              editorQuery.set('workspaceId', String(workspaceId));
+            }
+            const editorUrl = `${editorBase}?${editorQuery.toString()}`;
+
+            return (
           <a
-            href={`http://localhost:5174?templateId=${encodeURIComponent(t.id)}`}
+            href={editorUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="block"
@@ -74,6 +89,8 @@ export default async function TemplateList({ searchParams }: Props) {
             <h3 className="text-lg font-semibold">{t.title}</h3>
             <p className="text-sm text-zinc-600">{t.slug}</p>
           </a>
+            );
+          })()}
         </article>
       ))}
     </div>

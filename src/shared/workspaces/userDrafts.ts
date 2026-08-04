@@ -6,10 +6,12 @@ export type UserDraftListQuery = {
   pageSize: number;
   sortBy: DraftSortBy;
   sortOrder: DraftSortOrder;
+  workspaceId?: string;
 };
 
 export type UserDraftSummary = {
   id: string;
+  workspaceId: string | null;
   templateId: string | null;
   name: string;
   thumbnail: string | null;
@@ -34,6 +36,7 @@ type ApiEnvelope<T> = {
 function normalizeDraft(item: any): UserDraftSummary {
   return {
     id: String(item?.id ?? ''),
+    workspaceId: typeof item?.workspaceId === 'string' ? item.workspaceId : null,
     templateId: item?.templateId ?? null,
     name: typeof item?.name === 'string' && item.name.trim().length > 0 ? item.name : 'Untitled draft',
     thumbnail: typeof item?.thumbnail === 'string' ? item.thumbnail : null,
@@ -50,6 +53,10 @@ export async function fetchUserDrafts(query: UserDraftListQuery, headers?: Recor
     sortBy: query.sortBy,
     sortOrder: query.sortOrder,
   });
+
+  if (query.workspaceId) {
+    params.set('workspaceId', query.workspaceId);
+  }
 
   const response = await fetch(`/api/user-drafts?${params.toString()}`, {
     cache: 'no-store',

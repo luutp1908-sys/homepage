@@ -5,8 +5,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getAuthHeaders } from '../../shared/auth/getAuthHeaders';
 import CreateWorkspaceModal from './CreateWorkspaceModal';
-import { CreateWorkspacePayload, createWorkspace } from '../../shared/workspaces/workspaces';
+import { CreateWorkspacePayload, createWorkspace, fetchWorkspaces } from '../../shared/workspaces/workspaces';
 import { DraftSortBy, DraftSortOrder, fetchUserDrafts } from '../../shared/workspaces/userDrafts';
+import { useActiveWorkspace } from '../../shared/workspaces/useActiveWorkspace';
 
 type SortOption = 'updatedAt-desc' | 'createdAt-desc' | 'createdAt-asc';
 
@@ -31,7 +32,7 @@ function resolveSort(value: SortOption): { sortBy: DraftSortBy; sortOrder: Draft
   return { sortBy: 'updatedAt', sortOrder: 'desc' };
 }
 
-async function fetchDraftPage(page: number, sortOption: SortOption) {
+async function fetchDraftPage(page: number, sortOption: SortOption, workspaceId: string | null) {
   const { sortBy, sortOrder } = resolveSort(sortOption);
   return fetchUserDrafts(
     {
@@ -39,6 +40,7 @@ async function fetchDraftPage(page: number, sortOption: SortOption) {
       pageSize: PAGE_SIZE,
       sortBy,
       sortOrder,
+      ...(workspaceId ? { workspaceId } : {}),
     },
     getAuthHeaders(),
   );
@@ -49,6 +51,7 @@ type UserDraftItem = UserDraftPage['items'][number];
 
 function WorkspacesPageClientContent() {
   const queryClient = useQueryClient();
+  const { workspaceId, isLoading: isActiveWorkspaceLoading, setActiveWorkspace } = useActiveWorkspace();
   const [page, setPage] = useState(1);
   const [sortOption, setSortOption] = useState<SortOption>('updatedAt-desc');
   const [hasCreateUnauthorized, setHasCreateUnauthorized] = useState(false);
@@ -56,9 +59,15 @@ function WorkspacesPageClientContent() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
 
+  const workspacesQuery = useQuery({
+    queryKey: ['workspaces'],
+    queryFn: () => fetchWorkspaces(getAuthHeaders()),
+  });
+
   const draftsQuery = useQuery({
-    queryKey: ['user-drafts', page, sortOption],
-    queryFn: () => fetchDraftPage(page, sortOption),
+    queryKey: ['user-drafts', workspaceId, page, sortOption],
+    queryFn: () => fetchDraftPage(page, sortOption, workspaceId),
+    enabled: Boolean(workspaceId),
   });
 
   const items = (draftsQuery.data as UserDraftPage | undefined)?.items ?? [];
@@ -84,7 +93,9 @@ function WorkspacesPageClientContent() {
     onSuccess: async (created) => {
       setCreateSuccess(`Workspace "${created.name}" created successfully.`);
       setIsCreateModalOpen(false);
+      await setActiveWorkspace(created.id);
       await queryClient.invalidateQueries({ queryKey: ['user-drafts'] });
+      await queryClient.invalidateQueries({ queryKey: ['workspaces'] });
     },
     onError: (err: unknown) => {
       const message = err instanceof Error ? err.message : 'Failed to create workspace';
@@ -103,9 +114,16 @@ function WorkspacesPageClientContent() {
   const showError = !isUnauthorized && Boolean(error);
   const showEmpty = !isLoading && !error && items.length === 0;
   const showList = !isLoading && !error && items.length > 0;
+  const workspaceOptions = workspacesQuery.data ?? [];
+  const switcherValue = workspaceId ?? '';
+  const switcherDisabled = isActiveWorkspaceLoading || workspacesQuery.isLoading || isUnauthorized || workspaceOptions.length === 0;
 
   const getDraftEditorUrl = (draftId: string) => {
-    return `${editorBase}/draft/${encodeURIComponent(draftId)}`;
+    const baseUrl = `${editorBase}/draft/${encodeURIComponent(draftId)}`;
+    if (!workspaceId) return baseUrl;
+
+    const params = new URLSearchParams({ workspaceId });
+    return `${baseUrl}?${params.toString()}`;
   };
 
   const openCreateModal = () => {
@@ -127,6 +145,18 @@ function WorkspacesPageClientContent() {
 
   const submitCreateModal = async (payload: CreateWorkspacePayload) => {
     await createWorkspaceMutation.mutateAsync(payload);
+  };
+
+  const handleWorkspaceChange = async (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const nextWorkspaceId = event.target.value;
+    if (!nextWorkspaceId || nextWorkspaceId === workspaceId) return;
+
+    setCreateError(null);
+    setCreateSuccess(null);
+    setPage(1);
+    await setActiveWorkspace(nextWorkspaceId);
+    await queryClient.invalidateQueries({ queryKey: ['user-drafts'] });
+    await queryClient.invalidateQueries({ queryKey: ['workspaces'] });
   };
 
   const renderDraftCard = (item: UserDraftItem) => (
@@ -156,6 +186,32 @@ function WorkspacesPageClientContent() {
     }
   }, [page, totalPages]);
 
+  useEffect(() => {
+    if (isActiveWorkspaceLoading || workspaceId || workspacesQuery.isLoading) return;
+
+    const fallbackWorkspaceId = workspacesQuery.data?.[0]?.id;
+    if (!fallbackWorkspaceId) return;
+
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        await setActiveWorkspace(fallbackWorkspaceId);
+        if (!cancelled) {
+          await queryClient.invalidateQueries({ queryKey: ['user-drafts'] });
+        }
+      } catch {
+        // Keep the page usable even if setting active workspace fails.
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isActiveWorkspaceLoading, queryClient, setActiveWorkspace, workspaceId, workspacesQuery.data, workspacesQuery.isLoading]);
+
   return (
     <div className="flex flex-1 justify-center bg-zinc-50">
       <main className="w-full max-w-5xl px-6 py-8">
@@ -174,6 +230,25 @@ function WorkspacesPageClientContent() {
             >
               New workspace
             </button>
+
+            <label className="text-sm font-medium text-zinc-700">
+              Workspace
+              <select
+                className="mt-1 block w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm"
+                value={switcherValue}
+                onChange={handleWorkspaceChange}
+                disabled={switcherDisabled}
+              >
+                {workspaceOptions.length === 0 ? (
+                  <option value="">No workspaces</option>
+                ) : null}
+                {workspaceOptions.map((workspace) => (
+                  <option key={workspace.id} value={workspace.id}>
+                    {workspace.name}
+                  </option>
+                ))}
+              </select>
+            </label>
 
             <label className="text-sm font-medium text-zinc-700">
               Sort by

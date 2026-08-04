@@ -12,6 +12,7 @@ export default async function Categories({ searchParams }: Props) {
     for (const [k, v] of Object.entries(paramsResolved)) {
       if (!v) continue;
       if (k === 'categorySlug') continue;
+      if (k === 'workspaceId') continue;
       if (Array.isArray(v)) v.forEach((x) => qp.append(k, x));
       else qp.set(k, String(v));
     }
