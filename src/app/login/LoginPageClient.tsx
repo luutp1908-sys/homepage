@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
+import { persistAuthTokens } from '../../shared/auth/getAuthHeaders';
 
 const BE_BASE = process.env.NEXT_PUBLIC_BE_API_BASE || 'http://localhost:4000';
 
@@ -33,10 +34,9 @@ export default function LoginPageClient() {
 
       const payload = await response.json();
       const token = payload?.data?.accessToken ?? null;
+      const refreshToken = payload?.data?.refreshToken ?? null;
 
-      if (token) {
-        sessionStorage.setItem('homepage_access_token', token);
-      }
+      persistAuthTokens(token, refreshToken);
 
       router.push('/workspaces');
     } catch (err: any) {
