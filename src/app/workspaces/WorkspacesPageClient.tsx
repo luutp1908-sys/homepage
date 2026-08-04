@@ -5,9 +5,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getAuthHeaders } from '../../shared/auth/getAuthHeaders';
 import CreateWorkspaceModal from './CreateWorkspaceModal';
-import { CreateWorkspacePayload, createWorkspace, fetchWorkspaceMembers, fetchWorkspaces, inviteWorkspaceMember } from '../../shared/workspaces/workspaces';
+import { CreateWorkspacePayload, createWorkspace, fetchWorkspaceMembers, fetchWorkspaces, inviteWorkspaceMember, removeWorkspaceMember, updateWorkspaceMemberRole } from '../../shared/workspaces/workspaces';
 import { DraftSortBy, DraftSortOrder, fetchUserDrafts } from '../../shared/workspaces/userDrafts';
 import { useActiveWorkspace } from '../../shared/workspaces/useActiveWorkspace';
+import { fetchCurrentUser } from '../../shared/auth/useAuth';
 
 type SortOption = 'updatedAt-desc' | 'createdAt-desc' | 'createdAt-asc';
 
@@ -61,6 +62,9 @@ function WorkspacesPageClientContent() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
+  const [memberActionError, setMemberActionError] = useState<string | null>(null);
+  const [memberActionSuccess, setMemberActionSuccess] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const workspacesQuery = useQuery({
     queryKey: ['workspaces'],
@@ -81,6 +85,7 @@ function WorkspacesPageClientContent() {
 
   const items = (draftsQuery.data as UserDraftPage | undefined)?.items ?? [];
   const members = membersQuery.data ?? [];
+  const currentMember = members.find((member) => member.userId === currentUserId) ?? null;
   const total = draftsQuery.data?.total ?? 0;
   const queryError = draftsQuery.error as Error | null;
   const error = queryError?.message ?? null;
@@ -145,6 +150,58 @@ function WorkspacesPageClientContent() {
   });
 
   const isInvitingMember = inviteMemberMutation.isPending;
+
+  const updateMemberRoleMutation = useMutation({
+    mutationFn: async ({ memberId, role }: { memberId: string; role: 'ADMIN' | 'MEMBER' }) => {
+      const headers = getAuthHeaders();
+      if (!headers) {
+        throw new Error('You need to sign in before changing a member role.');
+      }
+      if (!workspaceId) {
+        throw new Error('Select a workspace before changing a member role.');
+      }
+
+      return updateWorkspaceMemberRole(workspaceId, memberId, role, headers);
+    },
+    onMutate: () => {
+      setMemberActionError(null);
+      setMemberActionSuccess(null);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['workspace-members', workspaceId] });
+      setMemberActionSuccess('Member role updated.');
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Failed to update member role';
+      setMemberActionError(message);
+    },
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: async (memberId: string) => {
+      const headers = getAuthHeaders();
+      if (!headers) {
+        throw new Error('You need to sign in before removing a member.');
+      }
+      if (!workspaceId) {
+        throw new Error('Select a workspace before removing a member.');
+      }
+
+      return removeWorkspaceMember(workspaceId, memberId, headers);
+    },
+    onMutate: () => {
+      setMemberActionError(null);
+      setMemberActionSuccess(null);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['workspace-members', workspaceId] });
+      setMemberActionSuccess('Member removed from workspace.');
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Failed to remove member';
+      setMemberActionError(message);
+    },
+  });
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);
   const editorBase = (process.env.NEXT_PUBLIC_EDITOR_APP_URL || 'http://localhost:5174').replace(/\/+$/, '');
@@ -213,6 +270,16 @@ function WorkspacesPageClientContent() {
     await inviteMemberMutation.mutateAsync(trimmedEmail);
   };
 
+  const canManageMembers = activeWorkspace?.type === 'TEAM' && Boolean(currentMember && ['OWNER', 'ADMIN'].includes(currentMember.role));
+
+  const handleRoleChange = async (memberId: string, role: 'ADMIN' | 'MEMBER') => {
+    await updateMemberRoleMutation.mutateAsync({ memberId, role });
+  };
+
+  const handleRemoveMember = async (memberId: string) => {
+    await removeMemberMutation.mutateAsync(memberId);
+  };
+
   const renderDraftCard = (item: UserDraftItem) => (
     <article key={item.id} className="rounded border border-zinc-200 bg-white shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50">
       <a href={getDraftEditorUrl(item.id)} target="_blank" rel="noopener noreferrer" className="block cursor-pointer p-4">
@@ -233,6 +300,29 @@ function WorkspacesPageClientContent() {
       </a>
     </article>
   );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCurrentUser() {
+      try {
+        const user = await fetchCurrentUser();
+        if (!cancelled) {
+          setCurrentUserId(user?.id ?? null);
+        }
+      } catch {
+        if (!cancelled) {
+          setCurrentUserId(null);
+        }
+      }
+    }
+
+    void loadCurrentUser();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (page > totalPages) {
@@ -405,15 +495,45 @@ function WorkspacesPageClientContent() {
                   <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-3 text-sm text-zinc-600">No members found yet.</div>
                 ) : null}
 
+                {memberActionError ? <p className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{memberActionError}</p> : null}
+                {memberActionSuccess ? <p className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{memberActionSuccess}</p> : null}
+
                 {members.map((member) => (
-                  <div key={member.id} className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-zinc-900">{member.name}</p>
-                      <p className="truncate text-sm text-zinc-600">{member.email}</p>
+                  <div key={member.id} className="rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-zinc-900">{member.name}</p>
+                        <p className="truncate text-sm text-zinc-600">{member.email}</p>
+                      </div>
+                      <div className="ml-3 text-right">
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">{member.role}</p>
+                      </div>
                     </div>
-                    <div className="ml-3 text-right">
-                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">{member.role}</p>
-                    </div>
+
+                    {canManageMembers && member.role !== 'OWNER' ? (
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <label className="text-xs font-medium text-zinc-600">
+                          <span className="sr-only">Role</span>
+                          <select
+                            className="rounded-xl border border-zinc-200 bg-white px-2.5 py-2 text-sm text-zinc-800 outline-none"
+                            value={member.role}
+                            onChange={(event) => handleRoleChange(member.id, event.target.value as 'ADMIN' | 'MEMBER')}
+                            disabled={updateMemberRoleMutation.isPending || removeMemberMutation.isPending}
+                          >
+                            <option value="MEMBER">Member</option>
+                            <option value="ADMIN">Admin</option>
+                          </select>
+                        </label>
+                        <button
+                          type="button"
+                          className="rounded-xl border border-red-200 px-2.5 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50"
+                          onClick={() => handleRemoveMember(member.id)}
+                          disabled={removeMemberMutation.isPending || updateMemberRoleMutation.isPending}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>

@@ -148,3 +148,39 @@ export async function fetchWorkspaceMembers(workspaceId: string, headers?: Recor
     joinedAt: typeof item?.joinedAt === 'string' ? item.joinedAt : new Date().toISOString(),
   })) as WorkspaceMemberSummary[];
 }
+
+export async function updateWorkspaceMemberRole(workspaceId: string, memberId: string, role: 'ADMIN' | 'MEMBER', headers?: Record<string, string>) {
+  const response = await fetch(`/api/workspaces/${workspaceId}/members/${memberId}`, {
+    method: 'PATCH',
+    headers: {
+      'content-type': 'application/json',
+      ...(headers || {}),
+    },
+    body: JSON.stringify({ role }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(text || `Failed to update workspace member role (${response.status})`);
+  }
+
+  const body = (await response.json()) as ApiEnvelope<any> | any;
+  return resolveData<any>(body);
+}
+
+export async function removeWorkspaceMember(workspaceId: string, memberId: string, headers?: Record<string, string>) {
+  const response = await fetch(`/api/workspaces/${workspaceId}/members/${memberId}`, {
+    method: 'DELETE',
+    headers: {
+      ...(headers || {}),
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(text || `Failed to remove workspace member (${response.status})`);
+  }
+
+  const body = (await response.json()) as ApiEnvelope<any> | any;
+  return resolveData<any>(body);
+}
