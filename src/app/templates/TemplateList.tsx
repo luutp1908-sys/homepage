@@ -74,9 +74,9 @@ export default async function TemplateList({ searchParams }: Props) {
         <article key={t.id} className="rounded border p-4 bg-white shadow-sm">
           {(() => {
             const editorQuery = new URLSearchParams({ templateId: String(t.id) });
-            if (workspaceId) {
-              editorQuery.set('workspaceId', String(workspaceId));
-            }
+            // if (workspaceId) {
+            //   editorQuery.set('workspaceId', String(workspaceId));
+            // }
             const editorUrl = `${editorBase}?${editorQuery.toString()}`;
 
             return (
