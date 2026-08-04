@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getAuthHeaders } from '../../shared/auth/getAuthHeaders';
 import CreateWorkspaceModal from './CreateWorkspaceModal';
-import { CreateWorkspacePayload, createWorkspace, fetchWorkspaces } from '../../shared/workspaces/workspaces';
+import { CreateWorkspacePayload, createWorkspace, fetchWorkspaces, inviteWorkspaceMember } from '../../shared/workspaces/workspaces';
 import { DraftSortBy, DraftSortOrder, fetchUserDrafts } from '../../shared/workspaces/userDrafts';
 import { useActiveWorkspace } from '../../shared/workspaces/useActiveWorkspace';
 
@@ -58,6 +58,9 @@ function WorkspacesPageClientContent() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
 
   const workspacesQuery = useQuery({
     queryKey: ['workspaces'],
@@ -108,6 +111,34 @@ function WorkspacesPageClientContent() {
 
   const isCreatingWorkspace = createWorkspaceMutation.isPending;
 
+  const inviteMemberMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const headers = getAuthHeaders();
+      if (!headers) {
+        throw new Error('You need to sign in before inviting a teammate.');
+      }
+      if (!workspaceId) {
+        throw new Error('Select a workspace before inviting a teammate.');
+      }
+
+      return inviteWorkspaceMember(workspaceId, { email }, headers);
+    },
+    onMutate: () => {
+      setInviteError(null);
+      setInviteSuccess(null);
+    },
+    onSuccess: () => {
+      setInviteSuccess('Invitation sent successfully.');
+      setInviteEmail('');
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Failed to invite teammate';
+      setInviteError(message);
+    },
+  });
+
+  const isInvitingMember = inviteMemberMutation.isPending;
+
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);
   const editorBase = (process.env.NEXT_PUBLIC_EDITOR_APP_URL || 'http://localhost:5174').replace(/\/+$/, '');
   const showUnauthorized = isUnauthorized;
@@ -153,10 +184,25 @@ function WorkspacesPageClientContent() {
 
     setCreateError(null);
     setCreateSuccess(null);
+    setInviteError(null);
+    setInviteSuccess(null);
+    setInviteEmail('');
     setPage(1);
     await setActiveWorkspace(nextWorkspaceId);
     await queryClient.invalidateQueries({ queryKey: ['user-drafts'] });
     await queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+  };
+
+  const handleInviteSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmedEmail = inviteEmail.trim();
+
+    if (!trimmedEmail) {
+      setInviteError('Please enter an email address.');
+      return;
+    }
+
+    await inviteMemberMutation.mutateAsync(trimmedEmail);
   };
 
   const renderDraftCard = (item: UserDraftItem) => (
@@ -264,6 +310,34 @@ function WorkspacesPageClientContent() {
             </label>
           </div>
         </div>
+
+        {workspaceOptions.find((workspace) => workspace.id === workspaceId)?.type === 'TEAM' ? (
+          <form onSubmit={handleInviteSubmit} className="mb-6 rounded border border-zinc-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col gap-3 md:flex-row md:items-end">
+              <label className="flex-1 text-sm font-medium text-zinc-700">
+                Invite teammate
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(event) => setInviteEmail(event.target.value)}
+                  placeholder="name@example.com"
+                  className="mt-1 block w-full rounded border border-zinc-300 px-3 py-2 text-sm"
+                  disabled={isInvitingMember}
+                />
+              </label>
+              <button
+                type="submit"
+                className="rounded bg-zinc-900 px-4 py-2 text-sm text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isInvitingMember}
+              >
+                {isInvitingMember ? 'Inviting...' : 'Invite'}
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-zinc-500">Only team workspaces support member invitations.</p>
+            {inviteError ? <p className="mt-2 text-sm text-red-600">{inviteError}</p> : null}
+            {inviteSuccess ? <p className="mt-2 text-sm text-emerald-600">{inviteSuccess}</p> : null}
+          </form>
+        ) : null}
 
         {createSuccess ? (
           <div className="mb-4 rounded border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{createSuccess}</div>

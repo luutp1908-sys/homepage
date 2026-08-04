@@ -19,6 +19,10 @@ export type CreateWorkspacePayload = {
   description?: string;
 };
 
+export type InviteWorkspaceMemberPayload = {
+  email: string;
+};
+
 type ApiEnvelope<T> = {
   success: boolean;
   data: T;
@@ -90,4 +94,23 @@ export async function fetchWorkspaces(headers?: Record<string, string>) {
   const data = resolveData<any>(body);
   const items = Array.isArray(data) ? data : [];
   return items.map(normalizeWorkspace);
+}
+
+export async function inviteWorkspaceMember(workspaceId: string, payload: InviteWorkspaceMemberPayload, headers?: Record<string, string>) {
+  const response = await fetch(`/api/workspaces/${workspaceId}/invite-member`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      ...(headers || {}),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(text || `Failed to invite workspace member (${response.status})`);
+  }
+
+  const body = (await response.json()) as ApiEnvelope<any> | any;
+  return resolveData<any>(body);
 }

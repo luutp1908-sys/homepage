@@ -12,10 +12,15 @@ type ActiveWorkspaceApiResponse = {
 };
 
 export function useActiveWorkspace() {
-  const [workspaceId, setWorkspaceId] = useState<string | null>(() => getStoredActiveWorkspaceId());
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const storedWorkspaceId = getStoredActiveWorkspaceId();
+    if (storedWorkspaceId) {
+      setWorkspaceId(storedWorkspaceId);
+    }
+
     let cancelled = false;
 
     const run = async () => {
