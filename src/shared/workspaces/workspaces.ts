@@ -23,6 +23,15 @@ export type InviteWorkspaceMemberPayload = {
   email: string;
 };
 
+export type WorkspaceMemberSummary = {
+  id: string;
+  userId: string;
+  email: string;
+  name: string;
+  role: 'OWNER' | 'ADMIN' | 'MEMBER';
+  joinedAt: string;
+};
+
 type ApiEnvelope<T> = {
   success: boolean;
   data: T;
@@ -113,4 +122,29 @@ export async function inviteWorkspaceMember(workspaceId: string, payload: Invite
 
   const body = (await response.json()) as ApiEnvelope<any> | any;
   return resolveData<any>(body);
+}
+
+export async function fetchWorkspaceMembers(workspaceId: string, headers?: Record<string, string>) {
+  const response = await fetch(`/api/workspaces/${workspaceId}/members`, {
+    cache: 'no-store',
+    headers,
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(text || `Failed to load workspace members (${response.status})`);
+  }
+
+  const body = (await response.json()) as ApiEnvelope<any> | any;
+  const data = resolveData<any>(body);
+  const items = Array.isArray(data) ? data : [];
+
+  return items.map((item: any) => ({
+    id: String(item?.id ?? ''),
+    userId: String(item?.userId ?? ''),
+    email: typeof item?.email === 'string' ? item.email : '',
+    name: typeof item?.name === 'string' && item.name.trim().length > 0 ? item.name : 'Unnamed member',
+    role: item?.role === 'OWNER' || item?.role === 'ADMIN' ? item.role : 'MEMBER',
+    joinedAt: typeof item?.joinedAt === 'string' ? item.joinedAt : new Date().toISOString(),
+  })) as WorkspaceMemberSummary[];
 }

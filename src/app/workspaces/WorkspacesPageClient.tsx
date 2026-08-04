@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getAuthHeaders } from '../../shared/auth/getAuthHeaders';
 import CreateWorkspaceModal from './CreateWorkspaceModal';
-import { CreateWorkspacePayload, createWorkspace, fetchWorkspaces, inviteWorkspaceMember } from '../../shared/workspaces/workspaces';
+import { CreateWorkspacePayload, createWorkspace, fetchWorkspaceMembers, fetchWorkspaces, inviteWorkspaceMember } from '../../shared/workspaces/workspaces';
 import { DraftSortBy, DraftSortOrder, fetchUserDrafts } from '../../shared/workspaces/userDrafts';
 import { useActiveWorkspace } from '../../shared/workspaces/useActiveWorkspace';
 
@@ -73,7 +73,14 @@ function WorkspacesPageClientContent() {
     enabled: Boolean(workspaceId),
   });
 
+  const membersQuery = useQuery({
+    queryKey: ['workspace-members', workspaceId],
+    queryFn: () => fetchWorkspaceMembers(workspaceId!, getAuthHeaders()),
+    enabled: Boolean(workspaceId),
+  });
+
   const items = (draftsQuery.data as UserDraftPage | undefined)?.items ?? [];
+  const members = membersQuery.data ?? [];
   const total = draftsQuery.data?.total ?? 0;
   const queryError = draftsQuery.error as Error | null;
   const error = queryError?.message ?? null;
@@ -343,35 +350,75 @@ function WorkspacesPageClientContent() {
         </section>
 
         {activeWorkspace?.type === 'TEAM' ? (
-          <form onSubmit={handleInviteSubmit} className="rounded-[24px] border border-zinc-200/80 bg-white/90 p-5 shadow-sm backdrop-blur sm:p-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-zinc-900">Invite a teammate</p>
-                <p className="mt-1 text-sm text-zinc-600">Bring collaborators into this workspace and keep everyone aligned.</p>
-              </div>
-              <div className="flex flex-1 flex-col gap-3 lg:max-w-xl lg:flex-row">
-                <label className="flex-1 text-sm font-medium text-zinc-700">
-                  <input
-                    type="email"
-                    value={inviteEmail}
-                    onChange={(event) => setInviteEmail(event.target.value)}
-                    placeholder="name@example.com"
-                    className="mt-1 block w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-900 shadow-sm outline-none ring-0 transition focus:border-zinc-400 focus:bg-white"
+          <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+            <form onSubmit={handleInviteSubmit} className="rounded-[24px] border border-zinc-200/80 bg-white/90 p-5 shadow-sm backdrop-blur sm:p-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-zinc-900">Invite a teammate</p>
+                  <p className="mt-1 text-sm text-zinc-600">Bring collaborators into this workspace and keep everyone aligned.</p>
+                </div>
+                <div className="flex flex-1 flex-col gap-3 lg:max-w-xl lg:flex-row">
+                  <label className="flex-1 text-sm font-medium text-zinc-700">
+                    <input
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(event) => setInviteEmail(event.target.value)}
+                      placeholder="name@example.com"
+                      className="mt-1 block w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-900 shadow-sm outline-none ring-0 transition focus:border-zinc-400 focus:bg-white"
+                      disabled={isInvitingMember}
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    className="rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={isInvitingMember}
-                  />
-                </label>
-                <button
-                  type="submit"
-                  className="rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={isInvitingMember}
-                >
-                  {isInvitingMember ? 'Inviting...' : 'Invite'}
-                </button>
+                  >
+                    {isInvitingMember ? 'Inviting...' : 'Invite'}
+                  </button>
+                </div>
               </div>
-            </div>
-            {inviteError ? <p className="mt-3 text-sm text-red-600">{inviteError}</p> : null}
-            {inviteSuccess ? <p className="mt-3 text-sm text-emerald-600">{inviteSuccess}</p> : null}
-          </form>
+              {inviteError ? <p className="mt-3 text-sm text-red-600">{inviteError}</p> : null}
+              {inviteSuccess ? <p className="mt-3 text-sm text-emerald-600">{inviteSuccess}</p> : null}
+            </form>
+
+            <section className="rounded-[24px] border border-zinc-200/80 bg-white/90 p-5 shadow-sm backdrop-blur sm:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-zinc-900">Members</p>
+                  <p className="mt-1 text-sm text-zinc-600">See everyone in this workspace.</p>
+                </div>
+                <div className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-sm text-zinc-600">
+                  {members.length}
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {membersQuery.isLoading ? (
+                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">Loading members...</div>
+                ) : null}
+
+                {membersQuery.error ? (
+                  <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">Unable to load members right now.</div>
+                ) : null}
+
+                {!membersQuery.isLoading && !membersQuery.error && members.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-3 text-sm text-zinc-600">No members found yet.</div>
+                ) : null}
+
+                {members.map((member) => (
+                  <div key={member.id} className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-zinc-900">{member.name}</p>
+                      <p className="truncate text-sm text-zinc-600">{member.email}</p>
+                    </div>
+                    <div className="ml-3 text-right">
+                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">{member.role}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
         ) : null}
 
         {createSuccess ? (
