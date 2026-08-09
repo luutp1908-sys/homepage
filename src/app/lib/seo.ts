@@ -20,6 +20,29 @@ type CategoryLike = {
   seo?: CategorySeo | null;
 };
 
+export const BROWSE_REVALIDATE_SECONDS = 60;
+
+type NextFetchCacheOptions = RequestInit & {
+  next: {
+    revalidate: number;
+    tags: string[];
+  };
+};
+
+export const CATEGORY_CACHE_OPTIONS: NextFetchCacheOptions = {
+  next: {
+    revalidate: BROWSE_REVALIDATE_SECONDS,
+    tags: ['categories'],
+  },
+};
+
+export const TEMPLATE_CACHE_OPTIONS: NextFetchCacheOptions = {
+  next: {
+    revalidate: BROWSE_REVALIDATE_SECONDS,
+    tags: ['templates'],
+  },
+};
+
 export async function resolveMaybePromise<T>(value: MaybePromise<T>): Promise<T> {
   return await value;
 }
@@ -39,7 +62,7 @@ export async function fetchCategories(params?: Record<string, string | string[] 
   }
 
   const url = `${getBaseUrl()}/api/categories${qp.toString() ? `?${qp.toString()}` : ''}`;
-  const res = await fetch(url, { cache: 'no-store' });
+  const res = await fetch(url, CATEGORY_CACHE_OPTIONS);
   if (!res.ok) return [];
 
   const payload = await res.json();

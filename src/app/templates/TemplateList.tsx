@@ -1,6 +1,7 @@
 import React from 'react';
 import { cookies } from 'next/headers';
 import { ACTIVE_WORKSPACE_STORAGE_KEY } from '../../shared/workspaces/constants';
+import { CATEGORY_CACHE_OPTIONS, TEMPLATE_CACHE_OPTIONS } from '../lib/seo';
 
 type TemplateItem = {
   id: string;
@@ -33,7 +34,7 @@ export default async function TemplateList({ searchParams }: Props) {
     try {
       const base = process.env.NEXT_PUBLIC_BASE_URL ?? process.env.BE_URL ?? 'http://localhost:3000';
       const catUrl = base.replace(/\/+$/, '') + `/api/categories`;
-      const catRes = await fetch(catUrl, { cache: 'no-store' });
+      const catRes = await fetch(catUrl, CATEGORY_CACHE_OPTIONS);
       if (catRes.ok) {
         const catPayload = await catRes.json();
         const cats = Array.isArray(catPayload) ? catPayload : catPayload?.data ?? catPayload?.items ?? [];
@@ -51,7 +52,7 @@ export default async function TemplateList({ searchParams }: Props) {
   const apiPath = `/api/templates${qp.toString() ? `?${qp.toString()}` : ''}`;
   const base = process.env.NEXT_PUBLIC_BASE_URL ?? process.env.BE_URL ?? 'http://localhost:3000';
   const url = base.replace(/\/+$/, '') + apiPath;
-  const res = await fetch(url, { cache: 'no-store' });
+  const res = await fetch(url, TEMPLATE_CACHE_OPTIONS);
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     return (
