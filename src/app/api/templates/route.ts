@@ -36,7 +36,7 @@ async function proxyTemplate(request: Request, method: 'GET' | 'POST' | 'PUT' | 
     const body = responseContentType.includes('application/json') ? await resp.json() : await resp.text();
 
     if (resp.ok && method !== 'GET') {
-      revalidateTag('templates');
+      revalidateTag('templates', 'max');
     }
 
     return NextResponse.json(body, { status: resp.status });

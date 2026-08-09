@@ -10,9 +10,9 @@ This roadmap captures the key features to implement in the current homepage proj
 
 ## 1. Caching and Revalidation Strategy
 
-- [ ] Define which pages are static, dynamic, and revalidated.
-- [ ] Use cache and revalidate settings intentionally for data fetches.
-- [ ] Add invalidation flow after template/category updates.
+- [x] Define which pages are static, dynamic, and revalidated.
+- [x] Use cache and revalidate settings intentionally for data fetches.
+- [x] Add invalidation flow after template/category updates.
 
 Concepts:
 - Server Components data caching
