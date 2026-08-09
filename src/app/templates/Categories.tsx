@@ -34,20 +34,6 @@ export default async function Categories({ searchParams }: Props) {
   const payload = await res.json();
   const items: Category[] = Array.isArray(payload) ? payload : payload?.data ?? payload?.items ?? [];
 
-  function buildHref(categoryId: string | null) {
-    const q = new URLSearchParams();
-    if (searchParams) {
-      for (const [k, v] of Object.entries(searchParams)) {
-        if (!v) continue;
-        if (k === 'categoryId') continue;
-        if (Array.isArray(v)) v.forEach((x) => q.append(k, String(x)));
-        else q.set(k, String(v));
-      }
-    }
-    if (categoryId) q.set('categoryId', categoryId);
-    return `/?${q.toString()}`;
-  }
-
   return (
     <div className="px-4 py-3">
       <div className="flex flex-wrap gap-2">
