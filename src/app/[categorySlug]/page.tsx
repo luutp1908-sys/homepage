@@ -7,6 +7,8 @@ import { buildSeoMetadata, fetchCategories, resolveMaybePromise } from '../lib/s
 type PageParams = { categorySlug: string };
 type SearchParams = { [key: string]: string | string[] | undefined };
 
+export const revalidate = 60;
+
 export async function generateMetadata({ params }: { params: PageParams | Promise<PageParams> }): Promise<Metadata> {
   const paramsValue = await resolveMaybePromise(params);
   const categories = await fetchCategories();

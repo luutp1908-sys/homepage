@@ -6,6 +6,8 @@ import { buildSeoMetadata, fetchCategories, resolveMaybePromise } from './lib/se
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
+export const revalidate = 60;
+
 export async function generateMetadata({ searchParams }: { searchParams?: SearchParams | Promise<SearchParams> }): Promise<Metadata> {
   const resolvedSearchParams = await resolveMaybePromise(searchParams ?? {});
   const categories = await fetchCategories(resolvedSearchParams);
