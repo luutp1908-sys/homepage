@@ -31,8 +31,8 @@ Done when:
 
 ## 2. Route Segment Loading/Error/Not-Found Boundaries
 
-- [ ] Add loading boundaries for slow segments.
-- [ ] Add error boundaries for segment-level failures.
+- [x] Add loading boundaries for slow segments.
+- [x] Add error boundaries for segment-level failures.
 - [ ] Add not-found handling for missing categories/resources.
 
 Concepts:
