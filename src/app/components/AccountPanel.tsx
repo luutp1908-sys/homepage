@@ -50,6 +50,15 @@ export default function AccountPanel() {
     setSaving(true);
     setMessage(null);
 
+    const previousProfile = profile;
+    const nextProfile: Profile = {
+      ...previousProfile,
+      displayName,
+      avatarUrl: avatarUrl || null,
+    };
+
+    setProfile(nextProfile);
+
     try {
       const data = await updateProfileAction({
         displayName,
@@ -59,6 +68,7 @@ export default function AccountPanel() {
       setProfile((data || {}) as Profile);
       setMessage('Profile updated');
     } catch (error: any) {
+      setProfile(previousProfile);
       setMessage(error?.message ?? 'Failed to update profile');
     } finally {
       setSaving(false);

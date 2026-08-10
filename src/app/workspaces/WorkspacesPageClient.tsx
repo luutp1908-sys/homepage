@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getAuthHeaders } from '../../shared/auth/getAuthHeaders';
 import CreateWorkspaceModal from './CreateWorkspaceModal';
-import { CreateWorkspacePayload, fetchWorkspaceMembers, fetchWorkspaces, inviteWorkspaceMember, removeWorkspaceMember } from '../../shared/workspaces/workspaces';
+import { CreateWorkspacePayload, fetchWorkspaceMembers, fetchWorkspaces, inviteWorkspaceMember, removeWorkspaceMember, WorkspaceSummary } from '../../shared/workspaces/workspaces';
 import { DraftSortBy, DraftSortOrder, fetchUserDrafts } from '../../shared/workspaces/userDrafts';
 import { useActiveWorkspace } from '../../shared/workspaces/useActiveWorkspace';
 import { fetchCurrentUser } from '../../shared/auth/useAuth';
@@ -50,6 +50,25 @@ async function fetchDraftPage(page: number, sortOption: SortOption, workspaceId:
 
 type UserDraftPage = Awaited<ReturnType<typeof fetchDraftPage>>;
 type UserDraftItem = UserDraftPage['items'][number];
+type WorkspacesQueryData = WorkspaceSummary[];
+
+function buildOptimisticWorkspace(payload: CreateWorkspacePayload): WorkspaceSummary {
+  const trimmedName = payload.name.trim();
+  const now = new Date().toISOString();
+
+  return {
+    id: `temp-${Date.now()}`,
+    name: trimmedName,
+    slug: trimmedName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'workspace',
+    type: payload.type,
+    description: payload.description?.trim() ? payload.description.trim() : null,
+    avatarUrl: null,
+    isArchived: false,
+    deletedAt: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
 
 function WorkspacesPageClientContent() {
   const queryClient = useQueryClient();
@@ -96,17 +115,35 @@ function WorkspacesPageClientContent() {
 
   const createWorkspaceMutation = useMutation({
     mutationFn: async (payload: CreateWorkspacePayload) => createWorkspaceAction(payload),
-    onMutate: () => {
+    onMutate: async (payload) => {
       setCreateError(null);
+      await queryClient.cancelQueries({ queryKey: ['workspaces'] });
+
+      const previousWorkspaces = queryClient.getQueryData<WorkspacesQueryData>(['workspaces']) ?? [];
+      const optimisticWorkspace = buildOptimisticWorkspace(payload);
+
+      queryClient.setQueryData<WorkspacesQueryData>(['workspaces'], [optimisticWorkspace, ...previousWorkspaces]);
+
+      return {
+        previousWorkspaces,
+        optimisticWorkspaceId: optimisticWorkspace.id,
+      };
     },
-    onSuccess: async (created) => {
+    onSuccess: async (created, _payload, context) => {
+      queryClient.setQueryData<WorkspacesQueryData>(['workspaces'], (current = []) =>
+        current.map((workspace) => (workspace.id === context?.optimisticWorkspaceId ? created : workspace)),
+      );
       setCreateSuccess(`Workspace "${created.name}" created successfully.`);
       setIsCreateModalOpen(false);
       await setActiveWorkspace(created.id);
       await queryClient.invalidateQueries({ queryKey: ['user-drafts'] });
       await queryClient.invalidateQueries({ queryKey: ['workspaces'] });
     },
-    onError: (err: unknown) => {
+    onError: (err: unknown, _payload, context) => {
+      if (context?.previousWorkspaces) {
+        queryClient.setQueryData(['workspaces'], context.previousWorkspaces);
+      }
+
       const message = err instanceof Error ? err.message : 'Failed to create workspace';
       if (message.includes('401')) {
         setHasCreateUnauthorized(true);
