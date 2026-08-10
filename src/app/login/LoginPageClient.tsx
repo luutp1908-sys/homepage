@@ -1,18 +1,33 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { FormEvent, useState } from 'react';
 import { persistAuthTokens } from '../../shared/auth/getAuthHeaders';
 
 const BE_BASE = process.env.NEXT_PUBLIC_BE_API_BASE || 'http://localhost:4000';
 
+function sanitizeNextPath(value: string | null) {
+  if (!value || !value.startsWith('/')) {
+    return '/workspaces';
+  }
+
+  if (value.startsWith('//')) {
+    return '/workspaces';
+  }
+
+  return value;
+}
+
 export default function LoginPageClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const nextPath = sanitizeNextPath(searchParams.get('next'));
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -38,7 +53,7 @@ export default function LoginPageClient() {
 
       persistAuthTokens(token, refreshToken);
 
-      router.push('/workspaces');
+      router.replace(nextPath);
     } catch (err: any) {
       setError(err?.message ?? 'Login failed');
     } finally {

@@ -68,8 +68,8 @@ Done when:
 
 ## 4. Auth Guard at Routing Layer
 
-- [ ] Protect private routes and redirect unauthenticated users.
-- [ ] Preserve return-to behavior after login.
+- [x] Protect private routes and redirect unauthenticated users.
+- [x] Preserve return-to behavior after login.
 - [ ] Keep auth checks consistent between page and API usage.
 
 Concepts:
