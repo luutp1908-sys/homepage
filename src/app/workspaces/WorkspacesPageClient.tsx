@@ -5,10 +5,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getAuthHeaders } from '../../shared/auth/getAuthHeaders';
 import CreateWorkspaceModal from './CreateWorkspaceModal';
-import { CreateWorkspacePayload, createWorkspace, fetchWorkspaceMembers, fetchWorkspaces, inviteWorkspaceMember, removeWorkspaceMember, updateWorkspaceMemberRole } from '../../shared/workspaces/workspaces';
+import { CreateWorkspacePayload, fetchWorkspaceMembers, fetchWorkspaces, inviteWorkspaceMember, removeWorkspaceMember } from '../../shared/workspaces/workspaces';
 import { DraftSortBy, DraftSortOrder, fetchUserDrafts } from '../../shared/workspaces/userDrafts';
 import { useActiveWorkspace } from '../../shared/workspaces/useActiveWorkspace';
 import { fetchCurrentUser } from '../../shared/auth/useAuth';
+import { createWorkspaceAction, updateWorkspaceMemberRoleAction } from './actions';
 
 type SortOption = 'updatedAt-desc' | 'createdAt-desc' | 'createdAt-asc';
 
@@ -94,14 +95,7 @@ function WorkspacesPageClientContent() {
   const isLoading = draftsQuery.isLoading;
 
   const createWorkspaceMutation = useMutation({
-    mutationFn: async (payload: CreateWorkspacePayload) => {
-      const headers = getAuthHeaders();
-      if (!headers) {
-        throw new Error('You need to sign in before creating a workspace.');
-      }
-
-      return createWorkspace(payload, headers);
-    },
+    mutationFn: async (payload: CreateWorkspacePayload) => createWorkspaceAction(payload),
     onMutate: () => {
       setCreateError(null);
     },
@@ -153,15 +147,11 @@ function WorkspacesPageClientContent() {
 
   const updateMemberRoleMutation = useMutation({
     mutationFn: async ({ memberId, role }: { memberId: string; role: 'ADMIN' | 'MEMBER' }) => {
-      const headers = getAuthHeaders();
-      if (!headers) {
-        throw new Error('You need to sign in before changing a member role.');
-      }
       if (!workspaceId) {
         throw new Error('Select a workspace before changing a member role.');
       }
 
-      return updateWorkspaceMemberRole(workspaceId, memberId, role, headers);
+      return updateWorkspaceMemberRoleAction({ workspaceId, memberId, role });
     },
     onMutate: () => {
       setMemberActionError(null);

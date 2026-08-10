@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getAuthHeaders } from '../../shared/auth/getAuthHeaders';
+import { changePasswordAction, updateProfileAction } from '../account/actions';
 
 type Profile = {
   id?: string;
@@ -50,19 +51,12 @@ export default function AccountPanel() {
     setMessage(null);
 
     try {
-      const res = await fetch('/api/user/me', {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json', ...(getAuthHeaders() || {}) },
-        body: JSON.stringify({ displayName, avatarUrl: avatarUrl || null }),
+      const data = await updateProfileAction({
+        displayName,
+        avatarUrl: avatarUrl || null,
       });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.message || 'Failed to update profile');
-      }
-
-      const data = await res.json();
-      setProfile(data?.data || {});
+      setProfile((data || {}) as Profile);
       setMessage('Profile updated');
     } catch (error: any) {
       setMessage(error?.message ?? 'Failed to update profile');
@@ -82,16 +76,7 @@ export default function AccountPanel() {
         newPassword,
       };
 
-      const res = await fetch('/api/user/me/password', {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json', ...(getAuthHeaders() || {}) },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.message || 'Failed to change password');
-      }
+      await changePasswordAction(payload);
 
       setCurrentPassword('');
       setNewPassword('');

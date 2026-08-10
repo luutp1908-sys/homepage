@@ -49,7 +49,7 @@ Done when:
 
 ## 3. Server Actions for Mutations
 
-- [ ] Implement create/update mutations with Server Actions.
+- [x] Implement create/update mutations with Server Actions.
 - [ ] Add optimistic UI where safe.
 - [ ] Keep API route handlers only where they add value.
 
