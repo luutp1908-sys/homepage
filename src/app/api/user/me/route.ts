@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server';
 
+function hasAuthCredentials(request: Request) {
+  return Boolean(request.headers.get('authorization') || request.headers.get('cookie'));
+}
+
 async function forwardUserRequest(request: Request, targetPath: string) {
+  if (!hasAuthCredentials(request)) {
+    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  }
+
   const beBase = process.env.BE_URL ?? 'http://localhost:4000';
   const reqUrl = new URL(request.url);
   const qs = reqUrl.search;
@@ -20,23 +28,30 @@ async function forwardUserRequest(request: Request, targetPath: string) {
     headers['content-type'] = request.headers.get('content-type') ?? 'application/json';
   }
 
-  const resp = await fetch(target, { method: request.method, headers, body });
+  try {
+    const resp = await fetch(target, { method: request.method, headers, body });
 
-  const contentType = resp.headers.get('content-type') ?? '';
-  const text = await resp.text();
+    const contentType = resp.headers.get('content-type') ?? '';
+    const text = await resp.text();
 
-  if (!text) {
-    return new NextResponse(null, { status: resp.status });
+    if (!text) {
+      return new NextResponse(null, { status: resp.status });
+    }
+
+    if (contentType.includes('application/json')) {
+      return NextResponse.json(JSON.parse(text), { status: resp.status });
+    }
+
+    return new NextResponse(text, {
+      status: resp.status,
+      headers: { 'content-type': contentType || 'text/plain' },
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { message: error?.message || 'Failed to proxy user request' },
+      { status: 502 },
+    );
   }
-
-  if (contentType.includes('application/json')) {
-    return NextResponse.json(JSON.parse(text), { status: resp.status });
-  }
-
-  return new NextResponse(text, {
-    status: resp.status,
-    headers: { 'content-type': contentType || 'text/plain' },
-  });
 }
 
 export async function GET(request: Request) {

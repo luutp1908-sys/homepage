@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getAuthHeaders } from '../../shared/auth/getAuthHeaders';
+import { fetchCurrentUser } from '../../shared/auth/useAuth';
 
 export default function AuthNav() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -10,8 +10,8 @@ export default function AuthNav() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const res = await fetch('/api/user/me', { cache: 'no-store', headers: getAuthHeaders() });
-        setIsAuthenticated(res.ok);
+        const user = await fetchCurrentUser();
+        setIsAuthenticated(Boolean(user?.id));
       } catch {
         setIsAuthenticated(false);
       } finally {

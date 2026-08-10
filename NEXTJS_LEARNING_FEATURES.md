@@ -70,7 +70,7 @@ Done when:
 
 - [x] Protect private routes and redirect unauthenticated users.
 - [x] Preserve return-to behavior after login.
-- [ ] Keep auth checks consistent between page and API usage.
+- [x] Keep auth checks consistent between page and API usage.
 
 Concepts:
 - Route protection
