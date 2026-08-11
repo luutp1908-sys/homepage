@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import TemplateList from '../templates/TemplateList';
 import FilterControls from '../templates/FilterControls';
 import Categories from '../templates/Categories';
+import CategoriesFallback from '../templates/CategoriesFallback';
+import TemplateListFallback from '../templates/TemplateListFallback';
 import { buildSeoMetadata, fetchCategories, resolveMaybePromise } from '../lib/seo';
 
 type PageParams = { categorySlug: string };
@@ -26,6 +29,8 @@ export default async function CategoryPage({ params, searchParams }: { params: P
   const paramsValue = await resolveMaybePromise(params);
   const paramsResolved = await resolveMaybePromise(searchParams ?? {});
   const merged = { ...(paramsResolved ?? {}), categorySlug: paramsValue.categorySlug } as { [key: string]: string | string[] | undefined };
+  const categoriesKey = JSON.stringify(merged);
+  const templatesKey = `${categoriesKey}::templates`;
 
   return (
     <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
@@ -35,9 +40,13 @@ export default async function CategoryPage({ params, searchParams }: { params: P
           <p className="text-sm text-zinc-600 mb-4">Server-side list for category</p>
         </div>
 
-        <Categories searchParams={merged} />
+        <Suspense key={categoriesKey} fallback={<CategoriesFallback />}>
+          <Categories searchParams={merged} />
+        </Suspense>
         <FilterControls />
-        <TemplateList searchParams={merged} />
+        <Suspense key={templatesKey} fallback={<TemplateListFallback />}>
+          <TemplateList searchParams={merged} />
+        </Suspense>
       </main>
     </div>
   );

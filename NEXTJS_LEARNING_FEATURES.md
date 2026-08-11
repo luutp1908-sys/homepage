@@ -105,8 +105,8 @@ Done when:
 
 ## 6. Streaming and Suspense for Browse Experience
 
-- [ ] Split page so shell renders first and lists stream later.
-- [ ] Add Suspense boundaries around expensive data sections.
+- [x] Split page so shell renders first and lists stream later.
+- [x] Add Suspense boundaries around expensive data sections.
 
 Concepts:
 - Streaming SSR
