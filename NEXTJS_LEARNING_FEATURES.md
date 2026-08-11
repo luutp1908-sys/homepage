@@ -176,7 +176,7 @@ Done when:
 
 ## 10. Testing Pyramid for App Router
 
-- [ ] Add unit tests for pure logic/selectors/utils.
+- [x] Add unit tests for pure logic/selectors/utils.
 - [ ] Add integration tests for important route segments/components.
 - [ ] Add end-to-end smoke tests for auth + browse + mutation path.
 
