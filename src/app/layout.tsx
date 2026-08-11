@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import AuthNav from "./components/AuthNav";
 import AppShell from "./components/AppShell";
@@ -23,8 +24,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
+  modal,
 }: Readonly<{
   children: React.ReactNode;
+  modal: React.ReactNode;
 }>) {
   return (
     <html
@@ -39,11 +42,14 @@ export default function RootLayout({
                 <BrowseLink className="text-sm font-semibold">Templates</BrowseLink>
                 <nav className="flex items-center gap-4 text-sm text-zinc-600">
                   <BrowseLink className="hover:text-black">Browse</BrowseLink>
-                  <AuthNav />
+                  <Suspense fallback={<div className="h-5 w-20 animate-pulse rounded bg-zinc-200" />}>
+                    <AuthNav />
+                  </Suspense>
                 </nav>
               </div>
             </header>
             {children}
+            {modal}
           </AppShell>
         </Providers>
       </body>

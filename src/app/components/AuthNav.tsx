@@ -1,11 +1,18 @@
 'use client';
 
+import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { fetchCurrentUser } from '../../shared/auth/useAuth';
 
 export default function AuthNav() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const currentSearch = searchParams.toString();
+  const returnTo = `${pathname}${currentSearch ? `?${currentSearch}` : ''}`;
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -27,15 +34,21 @@ export default function AuthNav() {
   }
 
   return isAuthenticated ? (
-    <a href="/account" className="hover:text-black">Account</a>
+    <Link href="/account" className="hover:text-black">Account</Link>
   ) : (
     <div className="flex items-center gap-2">
-      <a href="/register" className="rounded border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100">
+      <Link href="/register" className="rounded border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100">
         Sign up
-      </a>
-      <a href="/login" className="rounded bg-black px-3 py-1.5 text-sm text-white hover:bg-zinc-800">
+      </Link>
+      <Link
+        href={{
+          pathname: '/login',
+          query: { next: returnTo },
+        }}
+        className="rounded bg-black px-3 py-1.5 text-sm text-white hover:bg-zinc-800"
+      >
         Sign in
-      </a>
+      </Link>
     </div>
   );
 }

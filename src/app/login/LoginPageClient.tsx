@@ -1,11 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
 import { persistAuthTokens } from '../../shared/auth/getAuthHeaders';
 
 const BE_BASE = process.env.NEXT_PUBLIC_BE_API_BASE || 'http://localhost:4000';
+
+type LoginPageClientProps = {
+  variant?: 'page' | 'modal';
+  nextPath?: string | null;
+};
 
 function sanitizeNextPath(value: string | null) {
   if (!value || !value.startsWith('/')) {
@@ -19,15 +24,14 @@ function sanitizeNextPath(value: string | null) {
   return value;
 }
 
-export default function LoginPageClient() {
+export default function LoginPageClient({ variant = 'page', nextPath }: LoginPageClientProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const nextPath = sanitizeNextPath(searchParams.get('next'));
+  const resolvedNextPath = sanitizeNextPath(nextPath ?? null);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -53,7 +57,7 @@ export default function LoginPageClient() {
 
       persistAuthTokens(token, refreshToken);
 
-      router.replace(nextPath);
+      router.replace(resolvedNextPath);
     } catch (err: any) {
       setError(err?.message ?? 'Login failed');
     } finally {
@@ -61,9 +65,8 @@ export default function LoginPageClient() {
     }
   };
 
-  return (
-    <div className="mx-auto flex max-w-md flex-col items-center justify-center px-6 py-16">
-      <div className="w-full rounded border border-zinc-200 bg-white p-8 shadow-sm">
+  const card = (
+    <div className="w-full rounded border border-zinc-200 bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">Sign in</h1>
         <p className="mt-2 text-sm text-zinc-600">Use your account email and password to continue.</p>
 
@@ -104,6 +107,15 @@ export default function LoginPageClient() {
           </Link>
         </p>
       </div>
+  );
+
+  if (variant === 'modal') {
+    return card;
+  }
+
+  return (
+    <div className="mx-auto flex max-w-md flex-col items-center justify-center px-6 py-16">
+      {card}
     </div>
   );
 }

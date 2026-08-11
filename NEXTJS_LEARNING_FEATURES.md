@@ -87,7 +87,7 @@ Done when:
 
 ## 5. Intercepting/Parallel Route Login Modal
 
-- [ ] Add modal route flow for sign-in without losing current context.
+- [x] Add modal route flow for sign-in without losing current context.
 - [ ] Keep direct login route support for deep links.
 
 Concepts:

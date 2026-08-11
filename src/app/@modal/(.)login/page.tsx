@@ -1,8 +1,8 @@
-import LoginPageClient from './LoginPageClient'
+import LoginModalShell from './LoginModalShell';
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
-type LoginPageProps = {
+type LoginModalRouteProps = {
   searchParams?: SearchParams | Promise<SearchParams>;
 };
 
@@ -14,9 +14,9 @@ function resolveFirst(value: string | string[] | undefined) {
   return value ?? null;
 }
 
-export default async function LoginPage({ searchParams }: LoginPageProps) {
+export default async function LoginModalRoute({ searchParams }: LoginModalRouteProps) {
   const resolvedSearchParams = await (searchParams ?? {});
   const nextPath = resolveFirst(resolvedSearchParams.next);
 
-  return <LoginPageClient nextPath={nextPath} />
+  return <LoginModalShell nextPath={nextPath} />;
 }
