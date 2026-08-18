@@ -60,16 +60,46 @@ export async function OPTIONS(request: Request) {
   return withCors(request, new NextResponse(null, { status: 204 }));
 }
 
+async function getAccessibleWorkspaceIds(request: Request): Promise<string[]> {
+  try {
+    const resp = await fetch(`${getBackendBase()}/api/v1/workspace`, {
+      method: 'GET',
+      headers: buildForwardHeaders(request),
+    });
+
+    if (!resp.ok) {
+      return [];
+    }
+
+    const payload = await resp.json().catch(() => ({}));
+    return extractWorkspaceIds(payload);
+  } catch {
+    return [];
+  }
+}
+
 export async function GET(request: Request) {
   const cookieHeader = request.headers.get('cookie') ?? '';
   const cookiePairs = cookieHeader.split(';').map((part) => part.trim());
   const match = cookiePairs.find((pair) => pair.startsWith(`${ACTIVE_WORKSPACE_COOKIE}=`));
   const value = match ? decodeURIComponent(match.split('=').slice(1).join('=')) : null;
 
-  return withCors(
-    request,
-    NextResponse.json({ success: true, data: { workspaceId: value }, timestamp: new Date().toISOString() }),
+  const isStoredValueValid =
+    typeof value === 'string' && value.length > 0 && isUuid(value) && (await getAccessibleWorkspaceIds(request)).includes(value);
+
+  const response = NextResponse.json(
+    {
+      success: true,
+      data: { workspaceId: isStoredValueValid ? value : null },
+      timestamp: new Date().toISOString(),
+    },
   );
+
+  if (!isStoredValueValid) {
+    response.cookies.delete(ACTIVE_WORKSPACE_COOKIE, { path: '/' });
+  }
+
+  return withCors(request, response);
 }
 
 export async function POST(request: Request) {
