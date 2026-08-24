@@ -12,7 +12,21 @@ function getCookie(name: string): string | null {
 
 function getStoredAccessToken(): string | null {
   if (typeof window === 'undefined') return null;
-  return getCookie('access_token');
+
+  const cookieToken = getCookie('access_token');
+  if (cookieToken) {
+    return cookieToken;
+  }
+
+  // One-time migration from legacy sessionStorage token to cookie storage.
+  const legacyToken = window.sessionStorage.getItem('homepage_access_token');
+  if (legacyToken) {
+    document.cookie = `access_token=${encodeURIComponent(legacyToken)}; Path=/; Max-Age=900; SameSite=Lax`;
+    window.sessionStorage.removeItem('homepage_access_token');
+    return legacyToken;
+  }
+
+  return null;
 }
 
 export function getAuthHeaders() {
@@ -30,6 +44,8 @@ export function persistAuthTokens(accessToken?: string | null, refreshToken?: st
   if (refreshToken) {
     document.cookie = `refresh_token=${encodeURIComponent(refreshToken)}; Path=/; Max-Age=${60 * 60 * 24 * 7}; SameSite=Lax`;
   }
+
+  window.sessionStorage.removeItem('homepage_access_token');
 }
 
 export function clearStoredAuthTokens() {
@@ -37,4 +53,5 @@ export function clearStoredAuthTokens() {
 
   document.cookie = 'access_token=; Path=/; Max-Age=0; SameSite=Lax';
   document.cookie = 'refresh_token=; Path=/; Max-Age=0; SameSite=Lax';
+  window.sessionStorage.removeItem('homepage_access_token');
 }

@@ -2,34 +2,17 @@
 
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { fetchCurrentUser } from '../../shared/auth/useAuth';
+import { useAuthState } from '../../shared/auth/useAuthState';
 
 export default function AuthNav() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { isAuthenticated, isLoading } = useAuthState();
 
   const currentSearch = searchParams.toString();
   const returnTo = `${pathname}${currentSearch ? `?${currentSearch}` : ''}`;
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const user = await fetchCurrentUser();
-        setIsAuthenticated(Boolean(user?.id));
-      } catch {
-        setIsAuthenticated(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return <div className="h-5 w-20 animate-pulse rounded bg-zinc-200" />;
   }
 

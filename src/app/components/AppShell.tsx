@@ -1,34 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { getAuthHeaders } from '../../shared/auth/getAuthHeaders';
+import { useAuthState } from '../../shared/auth/useAuthState';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const res = await fetch('/api/user/me', {
-          cache: 'no-store',
-          headers: getAuthHeaders(),
-        });
-        setIsAuthenticated(res.ok);
-      } catch {
-        setIsAuthenticated(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, []);
+  const { isAuthenticated, isLoading } = useAuthState();
 
   return (
     <div className="min-h-screen bg-zinc-50">
-      {!loading && isAuthenticated ? (
+      {!isLoading && isAuthenticated ? (
         <aside className="fixed left-0 top-0 z-40 flex h-screen w-20 flex-col items-center border-r border-zinc-200 bg-white py-4 shadow-sm">
           <Link
             href="/workspaces"
@@ -57,7 +37,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </aside>
       ) : null}
 
-      <div className={isAuthenticated ? 'ml-20 flex min-h-screen flex-col' : 'flex min-h-screen flex-col'}>
+      <div className={!isLoading && isAuthenticated ? 'ml-20 flex min-h-screen flex-col' : 'flex min-h-screen flex-col'}>
         {children}
       </div>
     </div>
