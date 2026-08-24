@@ -3,7 +3,16 @@
 import { useEffect, useState } from 'react';
 import { fetchCurrentUser } from './useAuth';
 
+type AuthStateUser = {
+  id: string;
+  email: string;
+  displayName: string | null;
+  roles: string[];
+  permissions: string[];
+};
+
 export function useAuthState() {
+  const [user, setUser] = useState<AuthStateUser | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -15,10 +24,12 @@ export function useAuthState() {
       try {
         const user = await fetchCurrentUser();
         if (!cancelled) {
+          setUser(user);
           setIsAuthenticated(Boolean(user?.id));
         }
       } catch {
         if (!cancelled) {
+          setUser(null);
           setIsAuthenticated(false);
         }
       } finally {
@@ -36,6 +47,7 @@ export function useAuthState() {
   }, []);
 
   return {
+    user,
     isAuthenticated,
     isLoading,
   };

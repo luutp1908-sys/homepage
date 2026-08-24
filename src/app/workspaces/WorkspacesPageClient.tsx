@@ -7,7 +7,7 @@ import CreateWorkspaceModal from './CreateWorkspaceModal';
 import { CreateWorkspacePayload, fetchWorkspaceMembers, fetchWorkspaces, inviteWorkspaceMember, removeWorkspaceMember, WorkspaceSummary } from '../../shared/workspaces/workspaces';
 import { DraftSortBy, DraftSortOrder, fetchUserDrafts } from '../../shared/workspaces/userDrafts';
 import { useActiveWorkspace } from '../../shared/workspaces/useActiveWorkspace';
-import { fetchCurrentUser } from '../../shared/auth/useAuth';
+import { useAuthState } from '../../shared/auth/useAuthState';
 import { createWorkspaceAction, updateWorkspaceMemberRoleAction } from './actions';
 import WorkspaceHeader from './components/WorkspaceHeader';
 import WorkspaceOverviewCard from './components/WorkspaceOverviewCard';
@@ -66,6 +66,7 @@ function buildOptimisticWorkspace(payload: CreateWorkspacePayload): WorkspaceSum
 
 function WorkspacesPageClientContent() {
   const queryClient = useQueryClient();
+  const { user: currentUser } = useAuthState();
   const { workspaceId, isLoading: isActiveWorkspaceLoading, setActiveWorkspace } = useActiveWorkspace();
   const [page, setPage] = useState(1);
   const [sortOption, setSortOption] = useState<SortOption>('updatedAt-desc');
@@ -78,7 +79,6 @@ function WorkspacesPageClientContent() {
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
   const [memberActionError, setMemberActionError] = useState<string | null>(null);
   const [memberActionSuccess, setMemberActionSuccess] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const workspacesQuery = useQuery({
     queryKey: ['workspaces'],
@@ -99,6 +99,7 @@ function WorkspacesPageClientContent() {
 
   const items = (draftsQuery.data as UserDraftPage | undefined)?.items ?? [];
   const members = membersQuery.data ?? [];
+  const currentUserId = currentUser?.id ?? null;
   const currentMember = members.find((member) => member.userId === currentUserId) ?? null;
   const total = draftsQuery.data?.total ?? 0;
   const queryError = draftsQuery.error as Error | null;
@@ -300,29 +301,6 @@ function WorkspacesPageClientContent() {
   const handleRemoveMember = async (memberId: string) => {
     await removeMemberMutation.mutateAsync(memberId);
   };
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadCurrentUser() {
-      try {
-        const user = await fetchCurrentUser();
-        if (!cancelled) {
-          setCurrentUserId(user?.id ?? null);
-        }
-      } catch {
-        if (!cancelled) {
-          setCurrentUserId(null);
-        }
-      }
-    }
-
-    void loadCurrentUser();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     if (page > totalPages) {
