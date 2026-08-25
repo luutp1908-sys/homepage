@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { getAuthHeaders } from '../auth/getAuthHeaders';
-import { ACTIVE_WORKSPACE_STORAGE_KEY } from './constants';
+import { ACTIVE_WORKSPACE_BROADCAST_KEY } from './constants';
+import {
+  broadcastActiveWorkspaceChange,
+  parseActiveWorkspaceBroadcast,
+  persistActiveWorkspaceSession,
+  readStoredActiveWorkspaceId,
+} from './activeWorkspaceSync';
 
 type ActiveWorkspaceApiResponse = {
   success?: boolean;
@@ -16,14 +22,14 @@ export function useActiveWorkspace() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedWorkspaceId = getStoredActiveWorkspaceId();
+    const storedWorkspaceId = readStoredActiveWorkspaceId();
     if (storedWorkspaceId) {
       setWorkspaceId(storedWorkspaceId);
     }
 
     let cancelled = false;
 
-    const run = async () => {
+    const syncFromServer = async () => {
       setIsLoading(true);
 
       try {
@@ -43,19 +49,44 @@ export function useActiveWorkspace() {
 
         if (!cancelled) {
           setWorkspaceId(nextWorkspaceId);
-          if (nextWorkspaceId) {
-            window.sessionStorage.setItem(ACTIVE_WORKSPACE_STORAGE_KEY, nextWorkspaceId);
-          }
+          persistActiveWorkspaceSession(nextWorkspaceId);
         }
       } finally {
         if (!cancelled) setIsLoading(false);
       }
     };
 
-    run();
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== ACTIVE_WORKSPACE_BROADCAST_KEY) return;
+      if (!event.newValue) return;
+
+      const nextWorkspaceId = parseActiveWorkspaceBroadcast(event.newValue);
+      if (typeof nextWorkspaceId === 'undefined') return;
+
+      setWorkspaceId(nextWorkspaceId);
+      persistActiveWorkspaceSession(nextWorkspaceId);
+    };
+
+    const handleFocus = () => {
+      void syncFromServer();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void syncFromServer();
+      }
+    };
+
+    void syncFromServer();
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       cancelled = true;
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
@@ -75,13 +106,13 @@ export function useActiveWorkspace() {
     }
 
     setWorkspaceId(nextWorkspaceId);
-    window.sessionStorage.setItem(ACTIVE_WORKSPACE_STORAGE_KEY, nextWorkspaceId);
+    persistActiveWorkspaceSession(nextWorkspaceId);
+    broadcastActiveWorkspaceChange(nextWorkspaceId);
   };
 
   return { workspaceId, isLoading, setActiveWorkspace };
 }
 
 export function getStoredActiveWorkspaceId() {
-  if (typeof window === 'undefined') return null;
-  return window.sessionStorage.getItem(ACTIVE_WORKSPACE_STORAGE_KEY);
+  return readStoredActiveWorkspaceId();
 }
