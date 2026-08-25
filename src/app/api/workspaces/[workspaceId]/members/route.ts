@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { createErrorResponse, validateUuidPathParam } from '../../../../../shared/api/validation';
 
 function buildWorkspaceMembersUrl(request: Request, workspaceId: string) {
   const base = process.env.BE_URL ?? 'http://localhost:4000';
@@ -24,6 +25,11 @@ async function buildFetchOptions(request: Request): Promise<RequestInit> {
 export async function GET(request: Request, { params }: { params: Promise<{ workspaceId: string }> }) {
   try {
     const { workspaceId } = await params;
+    const workspaceIdValidation = validateUuidPathParam(workspaceId, 'workspaceId');
+    if ('error' in workspaceIdValidation) {
+      return workspaceIdValidation.error;
+    }
+
     const target = buildWorkspaceMembersUrl(request, workspaceId);
     const options = await buildFetchOptions(request);
     const response = await fetch(target, options);
@@ -40,6 +46,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ work
 
     return new NextResponse(text, { status: response.status, headers: { 'content-type': contentType || 'text/plain' } });
   } catch (err: any) {
-    return NextResponse.json({ error: err?.message ?? 'unknown error' }, { status: 500 });
+    return createErrorResponse(500, err?.message ?? 'unknown error');
   }
 }

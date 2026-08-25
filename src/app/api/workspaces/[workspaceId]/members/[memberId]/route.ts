@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { createErrorResponse, validateJsonBody, validateUuidPathParam } from '../../../../../../shared/api/validation';
 
 function buildMemberUrl(request: Request, workspaceId: string, memberId: string) {
   const base = process.env.BE_URL ?? 'http://localhost:4000';
@@ -12,7 +13,7 @@ function copyHeader(request: Request, headers: Record<string, string>, name: str
   }
 }
 
-async function buildFetchOptions(request: Request): Promise<RequestInit> {
+async function buildFetchOptions(request: Request, body?: string): Promise<RequestInit> {
   const headers: HeadersInit = {
     accept: 'application/json',
   };
@@ -20,7 +21,6 @@ async function buildFetchOptions(request: Request): Promise<RequestInit> {
   copyHeader(request, headers, 'authorization');
   copyHeader(request, headers, 'cookie');
 
-  const body = request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.text();
   if (body) {
     headers['content-type'] = request.headers.get('content-type') ?? 'application/json';
   }
@@ -54,14 +54,39 @@ async function toNextResponse(response: Response) {
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ workspaceId: string; memberId: string }> }) {
   const { workspaceId, memberId } = await params;
+  const workspaceValidation = validateUuidPathParam(workspaceId, 'workspaceId');
+  if ('error' in workspaceValidation) {
+    return workspaceValidation.error;
+  }
+
+  const memberValidation = validateUuidPathParam(memberId, 'memberId');
+  if ('error' in memberValidation) {
+    return memberValidation.error;
+  }
+
+  const bodyValidation = await validateJsonBody(request);
+  if ('error' in bodyValidation) {
+    return bodyValidation.error;
+  }
+
   const target = buildMemberUrl(request, workspaceId, memberId);
-  const options = await buildFetchOptions(request);
+  const options = await buildFetchOptions(request, bodyValidation.body);
   const response = await fetch(target, options);
   return toNextResponse(response);
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ workspaceId: string; memberId: string }> }) {
   const { workspaceId, memberId } = await params;
+  const workspaceValidation = validateUuidPathParam(workspaceId, 'workspaceId');
+  if ('error' in workspaceValidation) {
+    return workspaceValidation.error;
+  }
+
+  const memberValidation = validateUuidPathParam(memberId, 'memberId');
+  if ('error' in memberValidation) {
+    return memberValidation.error;
+  }
+
   const target = buildMemberUrl(request, workspaceId, memberId);
   const options = await buildFetchOptions(request);
   const response = await fetch(target, options);

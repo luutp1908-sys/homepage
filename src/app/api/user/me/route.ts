@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { createErrorResponse } from '../../../../shared/api/validation';
 
 function hasAuthCredentials(request: Request) {
   return Boolean(request.headers.get('authorization') || request.headers.get('cookie'));
@@ -6,7 +7,7 @@ function hasAuthCredentials(request: Request) {
 
 async function forwardUserRequest(request: Request, targetPath: string) {
   if (!hasAuthCredentials(request)) {
-    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    return createErrorResponse(401, 'Unauthorized');
   }
 
   const beBase = process.env.BE_URL ?? 'http://localhost:4000';
@@ -47,10 +48,7 @@ async function forwardUserRequest(request: Request, targetPath: string) {
       headers: { 'content-type': contentType || 'text/plain' },
     });
   } catch (error: any) {
-    return NextResponse.json(
-      { message: error?.message || 'Failed to proxy user request' },
-      { status: 502 },
-    );
+    return createErrorResponse(502, error?.message || 'Failed to proxy user request');
   }
 }
 

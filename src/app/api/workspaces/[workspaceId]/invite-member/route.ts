@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { createErrorResponse, validateJsonBody, validateUuidPathParam } from '../../../../../shared/api/validation';
 
 function buildInviteUrl(request: Request, workspaceId: string) {
   const base = process.env.BE_URL ?? 'http://localhost:4000';
@@ -12,15 +13,13 @@ function copyHeader(request: Request, headers: Record<string, string>, name: str
   }
 }
 
-async function buildFetchOptions(request: Request): Promise<RequestInit> {
+async function buildFetchOptions(request: Request, body?: string): Promise<RequestInit> {
   const headers: HeadersInit = {
     accept: 'application/json',
   };
 
   copyHeader(request, headers, 'authorization');
   copyHeader(request, headers, 'cookie');
-
-  const body = request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.text();
 
   if (body) {
     headers['content-type'] = request.headers.get('content-type') ?? 'application/json';
@@ -55,8 +54,18 @@ async function toNextResponse(response: Response) {
 
 export async function POST(request: Request, { params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = await params;
+  const workspaceIdValidation = validateUuidPathParam(workspaceId, 'workspaceId');
+  if ('error' in workspaceIdValidation) {
+    return workspaceIdValidation.error;
+  }
+
+  const validation = await validateJsonBody(request);
+  if ('error' in validation) {
+    return validation.error;
+  }
+
   const target = buildInviteUrl(request, workspaceId);
-  const options = await buildFetchOptions(request);
+  const options = await buildFetchOptions(request, validation.body);
   const response = await fetch(target, options);
 
   return toNextResponse(response);

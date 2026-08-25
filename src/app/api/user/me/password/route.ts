@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { createErrorResponse, validateJsonBody } from '../../../../../shared/api/validation';
 
 export async function PATCH(request: Request) {
   try {
@@ -15,7 +16,12 @@ export async function PATCH(request: Request) {
     if (auth) headers.authorization = auth;
     if (cookie) headers.cookie = cookie;
 
-    const body = await request.text();
+    const validation = await validateJsonBody(request);
+    if ('error' in validation) {
+      return validation.error;
+    }
+
+    const body = validation.body;
     const resp = await fetch(target, {
       method: 'PATCH',
       headers,
@@ -35,6 +41,6 @@ export async function PATCH(request: Request) {
 
     return new NextResponse(text, { status: resp.status, headers: { 'content-type': contentType || 'text/plain' } });
   } catch (err: any) {
-    return NextResponse.json({ error: err?.message ?? 'unknown error' }, { status: 500 });
+    return createErrorResponse(500, err?.message ?? 'unknown error');
   }
 }

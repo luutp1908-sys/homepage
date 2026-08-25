@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
+import { createErrorResponse, validateJsonBody } from '../../../shared/api/validation';
 
 async function proxyTemplate(request: Request, method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE') {
   try {
@@ -24,7 +25,15 @@ async function proxyTemplate(request: Request, method: 'GET' | 'POST' | 'PUT' | 
     const contentType = request.headers.get('content-type');
     if (contentType) headers['content-type'] = contentType;
 
-    const bodyPayload = method === 'GET' || method === 'DELETE' ? undefined : await request.text();
+    let bodyPayload: string | undefined;
+    if (method !== 'GET' && method !== 'DELETE') {
+      const validation = await validateJsonBody(request);
+      if ('error' in validation) {
+        return validation.error;
+      }
+
+      bodyPayload = validation.body;
+    }
 
     const resp = await fetch(target, {
       method,
@@ -41,7 +50,7 @@ async function proxyTemplate(request: Request, method: 'GET' | 'POST' | 'PUT' | 
 
     return NextResponse.json(body, { status: resp.status });
   } catch (err: any) {
-    return NextResponse.json({ error: err?.message ?? 'unknown error' }, { status: 500 });
+    return createErrorResponse(500, err?.message ?? 'unknown error');
   }
 }
 
