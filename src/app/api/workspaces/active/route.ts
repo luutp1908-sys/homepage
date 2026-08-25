@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 
 const ACTIVE_WORKSPACE_COOKIE = 'homepage_active_workspace_id';
 
+type WorkspaceAccessResult =
+  | { ok: true; workspaceIds: string[] }
+  | { ok: false; status: number; message: string };
+
 function getAllowedOrigins() {
   const configured = [process.env.NEXT_PUBLIC_EDITOR_APP_URL, process.env.EDITOR_APP_URL]
     .filter((value): value is string => Boolean(value && value.trim().length > 0))
@@ -56,11 +60,29 @@ function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
+function errorResponse(status: number, message: string) {
+  return NextResponse.json(
+    {
+      success: false,
+      message,
+      timestamp: new Date().toISOString(),
+    },
+    { status },
+  );
+}
+
+function parseWorkspaceIdFromCookie(request: Request): string | null {
+  const cookieHeader = request.headers.get('cookie') ?? '';
+  const cookiePairs = cookieHeader.split(';').map((part) => part.trim());
+  const match = cookiePairs.find((pair) => pair.startsWith(`${ACTIVE_WORKSPACE_COOKIE}=`));
+  return match ? decodeURIComponent(match.split('=').slice(1).join('=')) : null;
+}
+
 export async function OPTIONS(request: Request) {
   return withCors(request, new NextResponse(null, { status: 204 }));
 }
 
-async function getAccessibleWorkspaceIds(request: Request): Promise<string[]> {
+async function getAccessibleWorkspaceIds(request: Request): Promise<WorkspaceAccessResult> {
   try {
     const resp = await fetch(`${getBackendBase()}/api/v1/workspace`, {
       method: 'GET',
@@ -68,24 +90,48 @@ async function getAccessibleWorkspaceIds(request: Request): Promise<string[]> {
     });
 
     if (!resp.ok) {
-      return [];
+      const text = await resp.text().catch(() => '');
+      return {
+        ok: false,
+        status: resp.status,
+        message: text || `Failed to verify workspace access (${resp.status})`,
+      };
     }
 
     const payload = await resp.json().catch(() => ({}));
-    return extractWorkspaceIds(payload);
+    return { ok: true, workspaceIds: extractWorkspaceIds(payload) };
   } catch {
-    return [];
+    return {
+      ok: false,
+      status: 502,
+      message: 'Failed to verify workspace access',
+    };
   }
 }
 
 export async function GET(request: Request) {
-  const cookieHeader = request.headers.get('cookie') ?? '';
-  const cookiePairs = cookieHeader.split(';').map((part) => part.trim());
-  const match = cookiePairs.find((pair) => pair.startsWith(`${ACTIVE_WORKSPACE_COOKIE}=`));
-  const value = match ? decodeURIComponent(match.split('=').slice(1).join('=')) : null;
+  const value = parseWorkspaceIdFromCookie(request);
 
-  const isStoredValueValid =
-    typeof value === 'string' && value.length > 0 && isUuid(value) && (await getAccessibleWorkspaceIds(request)).includes(value);
+  if (!value || !isUuid(value)) {
+    const response = NextResponse.json({
+      success: true,
+      data: { workspaceId: null },
+      timestamp: new Date().toISOString(),
+    });
+
+    if (value) {
+      response.cookies.delete(ACTIVE_WORKSPACE_COOKIE, { path: '/' });
+    }
+
+    return withCors(request, response);
+  }
+
+  const access = await getAccessibleWorkspaceIds(request);
+  if (!access.ok) {
+    return withCors(request, errorResponse(access.status, access.message));
+  }
+
+  const isStoredValueValid = access.workspaceIds.includes(value);
 
   const response = NextResponse.json(
     {
@@ -108,44 +154,18 @@ export async function POST(request: Request) {
     const workspaceId = typeof body?.workspaceId === 'string' ? body.workspaceId : '';
 
     if (!workspaceId || !isUuid(workspaceId)) {
-      return withCors(
-        request,
-        NextResponse.json(
-          { success: false, message: 'workspaceId must be a valid UUID' },
-          { status: 400 },
-        ),
-      );
+      return withCors(request, errorResponse(400, 'workspaceId must be a valid UUID'));
     }
 
-    const target = `${getBackendBase()}/api/v1/workspace`;
-    const resp = await fetch(target, {
-      method: 'GET',
-      headers: buildForwardHeaders(request),
-    });
-
-    if (!resp.ok) {
-      const text = await resp.text().catch(() => '');
-      return withCors(
-        request,
-        NextResponse.json(
-          { success: false, message: text || `Failed to verify workspace access (${resp.status})` },
-          { status: resp.status },
-        ),
-      );
+    const access = await getAccessibleWorkspaceIds(request);
+    if (!access.ok) {
+      return withCors(request, errorResponse(access.status, access.message));
     }
 
-    const payload = await resp.json();
-    const workspaceIds = extractWorkspaceIds(payload);
-    const hasAccess = workspaceIds.includes(workspaceId);
+    const hasAccess = access.workspaceIds.includes(workspaceId);
 
     if (!hasAccess) {
-      return withCors(
-        request,
-        NextResponse.json(
-          { success: false, message: 'You do not have access to this workspace' },
-          { status: 403 },
-        ),
-      );
+      return withCors(request, errorResponse(403, 'You do not have access to this workspace'));
     }
 
     const response = NextResponse.json({
@@ -164,12 +184,6 @@ export async function POST(request: Request) {
 
     return withCors(request, response);
   } catch (err: any) {
-    return withCors(
-      request,
-      NextResponse.json(
-        { success: false, message: err?.message ?? 'Unexpected error' },
-        { status: 500 },
-      ),
-    );
+    return withCors(request, errorResponse(500, err?.message ?? 'Unexpected error'));
   }
 }

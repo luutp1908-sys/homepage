@@ -7,7 +7,7 @@ Use this as the working checklist for homepage improvements. Tick each item as t
 - [x] Make auth state one source of truth across the app.
 - [x] Remove the split between cookie-based auth, session storage, and ad hoc token persistence.
 - [x] Make active workspace state authoritative across refresh, tabs, and route changes.
-- [ ] Align cookie, session storage, URL behavior, and server truth for workspace switching.
+- [x] Align cookie, session storage, URL behavior, and server truth for workspace switching.
 
 ## API and Route Hardening
 

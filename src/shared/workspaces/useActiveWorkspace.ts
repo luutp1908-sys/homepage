@@ -17,6 +17,13 @@ type ActiveWorkspaceApiResponse = {
   };
 };
 
+function resolveWorkspaceIdFromPayload(payload: ActiveWorkspaceApiResponse, fallback: string | null = null) {
+  const workspaceId = payload?.data?.workspaceId;
+  if (typeof workspaceId === 'string') return workspaceId;
+  if (workspaceId === null) return null;
+  return fallback;
+}
+
 export function useActiveWorkspace() {
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,12 +47,16 @@ export function useActiveWorkspace() {
         });
 
         if (!response.ok) {
+          if ((response.status === 401 || response.status === 403) && !cancelled) {
+            setWorkspaceId(null);
+            persistActiveWorkspaceSession(null);
+          }
           if (!cancelled) setIsLoading(false);
           return;
         }
 
         const payload = (await response.json()) as ActiveWorkspaceApiResponse;
-        const nextWorkspaceId = typeof payload?.data?.workspaceId === 'string' ? payload.data.workspaceId : null;
+        const nextWorkspaceId = resolveWorkspaceIdFromPayload(payload, null);
 
         if (!cancelled) {
           setWorkspaceId(nextWorkspaceId);
@@ -105,9 +116,12 @@ export function useActiveWorkspace() {
       throw new Error(text || `Failed to set active workspace (${response.status})`);
     }
 
-    setWorkspaceId(nextWorkspaceId);
-    persistActiveWorkspaceSession(nextWorkspaceId);
-    broadcastActiveWorkspaceChange(nextWorkspaceId);
+    const payload = (await response.json().catch(() => ({}))) as ActiveWorkspaceApiResponse;
+    const resolvedWorkspaceId = resolveWorkspaceIdFromPayload(payload, nextWorkspaceId);
+
+    setWorkspaceId(resolvedWorkspaceId);
+    persistActiveWorkspaceSession(resolvedWorkspaceId);
+    broadcastActiveWorkspaceChange(resolvedWorkspaceId);
   };
 
   return { workspaceId, isLoading, setActiveWorkspace };

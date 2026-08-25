@@ -4,6 +4,26 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAuthHeaders } from '../../../shared/auth/getAuthHeaders';
 
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+async function readApiErrorMessage(response: Response) {
+  const text = await response.text().catch(() => '');
+  if (!text) return `Failed to switch workspace (${response.status})`;
+
+  try {
+    const json = JSON.parse(text) as { message?: string };
+    if (typeof json?.message === 'string' && json.message.length > 0) {
+      return json.message;
+    }
+  } catch {
+    // Fall back to the raw response body when it is not JSON.
+  }
+
+  return text;
+}
+
 type WorkspaceLegacyRedirectClientProps = {
   workspaceId: string;
 };
@@ -13,6 +33,11 @@ export default function WorkspaceLegacyRedirectClient({ workspaceId }: Workspace
   const [statusMessage, setStatusMessage] = useState('Switching workspace...');
 
   useEffect(() => {
+    if (!workspaceId || !isUuid(workspaceId)) {
+      setStatusMessage('Invalid workspace ID.');
+      return;
+    }
+
     let cancelled = false;
 
     const run = async () => {
@@ -32,8 +57,11 @@ export default function WorkspaceLegacyRedirectClient({ workspaceId }: Workspace
             return;
           }
 
-          const text = await response.text().catch(() => '');
-          throw new Error(text || `Failed to switch workspace (${response.status})`);
+          if (response.status === 403) {
+            throw new Error('You do not have access to this workspace.');
+          }
+
+          throw new Error(await readApiErrorMessage(response));
         }
 
         if (!cancelled) {
