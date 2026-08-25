@@ -14,7 +14,7 @@ Use this as the working checklist for homepage improvements. Tick each item as t
 - [x] Validate query and body input in all route handlers.
 - [x] Standardize error payloads and HTTP status codes.
 - [x] Avoid leaking internal errors in API responses.
-- [ ] Add not-found handling for missing categories and resources.
+- [x] Add not-found handling for missing categories and resources.
 
 ## SEO and Metadata
 
