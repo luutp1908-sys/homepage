@@ -1,8 +1,7 @@
 import React from 'react';
 import { cookies } from 'next/headers';
 import { ACTIVE_WORKSPACE_STORAGE_KEY } from '../../shared/workspaces/constants';
-import { CATEGORY_CACHE_OPTIONS, TEMPLATE_CACHE_OPTIONS } from '../lib/seo';
-import { buildHomepageApiUrl } from '../../shared/api/fetch-utils';
+import { loadTemplates } from './loaders';
 
 type TemplateItem = {
   id: string;
@@ -15,52 +14,14 @@ type Props = {
 };
 
 export default async function TemplateList({ searchParams }: Props) {
-  const paramsResolved = searchParams && typeof (searchParams as any).then === 'function' ? await (searchParams as any) : (searchParams ?? {});
   const cookieStore = await cookies();
   const workspaceId = cookieStore.get(ACTIVE_WORKSPACE_STORAGE_KEY)?.value;
-  const qp = new URLSearchParams();
-  if (paramsResolved) {
-    for (const [k, v] of Object.entries(paramsResolved)) {
-      if (!v) continue;
-      if (k === 'categorySlug') continue;
-      if (k === 'workspaceId') continue;
-      if (Array.isArray(v)) v.forEach((x) => qp.append(k, x));
-      else qp.set(k, String(v));
-    }
-  }
-
-  // If caller passed categorySlug instead of categoryId, attempt to resolve it to an id
-  if (!qp.get('categoryId') && paramsResolved?.categorySlug) {
-    const slug = Array.isArray(paramsResolved.categorySlug) ? paramsResolved.categorySlug[0] : String(paramsResolved.categorySlug);
-    try {
-      const catUrl = buildHomepageApiUrl('/api/categories');
-      const catRes = await fetch(catUrl, CATEGORY_CACHE_OPTIONS);
-      if (catRes.ok) {
-        const catPayload = await catRes.json();
-        const cats = Array.isArray(catPayload) ? catPayload : catPayload?.data ?? catPayload?.items ?? [];
-        const found = Array.isArray(cats) ? cats.find((x: any) => x.slug === slug) : undefined;
-        if (found?.id) qp.set('categoryId', String(found.id));
-      }
-    } catch (e) {
-      // ignore resolution failures and continue without categoryId
-    }
-  }
-
-  // Backend DTO does not accept categorySlug; keep it frontend-only.
-  qp.delete('categorySlug');
-
-  const apiPath = `/api/templates${qp.toString() ? `?${qp.toString()}` : ''}`;
-  const url = buildHomepageApiUrl(apiPath);
-  const res = await fetch(url, TEMPLATE_CACHE_OPTIONS);
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
+  const { items, errorMessage } = await loadTemplates(searchParams);
+  if (errorMessage) {
     return (
-      <div className="text-red-600">Failed to load templates ({res.status}){text ? `: ${text}` : ''}</div>
+      <div className="text-red-600">{errorMessage}</div>
     );
   }
-
-  const payload = await res.json();
-  const items: TemplateItem[] = payload?.data?.items ?? payload?.items ?? [];
 
   if (!items || items.length === 0) {
     return <div className="p-6">No templates found.</div>;

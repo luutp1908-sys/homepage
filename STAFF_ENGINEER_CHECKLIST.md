@@ -26,7 +26,7 @@ Use this as the working checklist for homepage improvements. Tick each item as t
 
 - [x] Reduce duplication in server fetching and environment handling.
 - [x] Consolidate shared fetch patterns, cache rules, and base URL resolution.
-- [ ] Keep route handlers, server actions, and server components clearly separated.
+- [x] Keep route handlers, server actions, and server components clearly separated.
 
 ## Testing
 
