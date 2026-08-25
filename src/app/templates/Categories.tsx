@@ -1,6 +1,7 @@
 import React from 'react';
 import { CATEGORY_CACHE_OPTIONS } from '../lib/seo';
 import Link from 'next/link';
+import { buildHomepageApiUrl } from '../../shared/api/fetch-utils';
 
 type Category = { id: string; name: string; slug?: string };
 
@@ -21,8 +22,7 @@ export default async function Categories({ searchParams }: Props) {
     }
 
     const apiPath = `/api/categories${qp.toString() ? `?${qp.toString()}` : ''}`;
-    const base = process.env.NEXT_PUBLIC_BASE_URL ?? process.env.BE_URL ?? 'http://localhost:3000';
-    const url = base.replace(/\/+$/, '') + apiPath;
+    const url = buildHomepageApiUrl(apiPath);
     const res = await fetch(url, CATEGORY_CACHE_OPTIONS);
     if (!res.ok) {
         const text = await res.text().catch(() => '');

@@ -2,6 +2,7 @@ import React from 'react';
 import { cookies } from 'next/headers';
 import { ACTIVE_WORKSPACE_STORAGE_KEY } from '../../shared/workspaces/constants';
 import { CATEGORY_CACHE_OPTIONS, TEMPLATE_CACHE_OPTIONS } from '../lib/seo';
+import { buildHomepageApiUrl } from '../../shared/api/fetch-utils';
 
 type TemplateItem = {
   id: string;
@@ -32,8 +33,7 @@ export default async function TemplateList({ searchParams }: Props) {
   if (!qp.get('categoryId') && paramsResolved?.categorySlug) {
     const slug = Array.isArray(paramsResolved.categorySlug) ? paramsResolved.categorySlug[0] : String(paramsResolved.categorySlug);
     try {
-      const base = process.env.NEXT_PUBLIC_BASE_URL ?? process.env.BE_URL ?? 'http://localhost:3000';
-      const catUrl = base.replace(/\/+$/, '') + `/api/categories`;
+      const catUrl = buildHomepageApiUrl('/api/categories');
       const catRes = await fetch(catUrl, CATEGORY_CACHE_OPTIONS);
       if (catRes.ok) {
         const catPayload = await catRes.json();
@@ -50,8 +50,7 @@ export default async function TemplateList({ searchParams }: Props) {
   qp.delete('categorySlug');
 
   const apiPath = `/api/templates${qp.toString() ? `?${qp.toString()}` : ''}`;
-  const base = process.env.NEXT_PUBLIC_BASE_URL ?? process.env.BE_URL ?? 'http://localhost:3000';
-  const url = base.replace(/\/+$/, '') + apiPath;
+  const url = buildHomepageApiUrl(apiPath);
   const res = await fetch(url, TEMPLATE_CACHE_OPTIONS);
   if (!res.ok) {
     const text = await res.text().catch(() => '');

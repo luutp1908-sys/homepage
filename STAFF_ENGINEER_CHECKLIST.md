@@ -24,8 +24,8 @@ Use this as the working checklist for homepage improvements. Tick each item as t
 
 ## Data Fetching and Server Logic
 
-- [ ] Reduce duplication in server fetching and environment handling.
-- [ ] Consolidate shared fetch patterns, cache rules, and base URL resolution.
+- [x] Reduce duplication in server fetching and environment handling.
+- [x] Consolidate shared fetch patterns, cache rules, and base URL resolution.
 - [ ] Keep route handlers, server actions, and server components clearly separated.
 
 ## Testing

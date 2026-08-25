@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { buildHomepageApiUrl, getHomepageBaseUrl } from '../../shared/api/fetch-utils';
 
 type MaybePromise<T> = T | Promise<T>;
 
@@ -48,7 +49,7 @@ export async function resolveMaybePromise<T>(value: MaybePromise<T>): Promise<T>
 }
 
 export function getBaseUrl(): string {
-  return (process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000').replace(/\/+$/, '');
+  return getHomepageBaseUrl();
 }
 
 export async function fetchCategories(params?: Record<string, string | string[] | undefined>): Promise<CategoryLike[]> {
@@ -61,7 +62,7 @@ export async function fetchCategories(params?: Record<string, string | string[] 
     }
   }
 
-  const url = `${getBaseUrl()}/api/categories${qp.toString() ? `?${qp.toString()}` : ''}`;
+  const url = buildHomepageApiUrl(`/api/categories${qp.toString() ? `?${qp.toString()}` : ''}`);
   const res = await fetch(url, CATEGORY_CACHE_OPTIONS);
   if (!res.ok) return [];
 
