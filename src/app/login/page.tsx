@@ -1,4 +1,5 @@
 import LoginPageClient from './LoginPageClient'
+import { resolveNextPath } from './nextPath';
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
@@ -6,17 +7,8 @@ type LoginPageProps = {
   searchParams?: SearchParams | Promise<SearchParams>;
 };
 
-function resolveFirst(value: string | string[] | undefined) {
-  if (Array.isArray(value)) {
-    return value[0] ?? null;
-  }
-
-  return value ?? null;
-}
-
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const resolvedSearchParams = await (searchParams ?? {});
-  const nextPath = resolveFirst(resolvedSearchParams.next);
+  const nextPath = await resolveNextPath(searchParams);
 
   return <LoginPageClient nextPath={nextPath} />
 }

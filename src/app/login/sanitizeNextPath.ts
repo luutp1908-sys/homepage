@@ -7,5 +7,13 @@ export function sanitizeNextPath(value: string | null | undefined) {
     return '/workspaces';
   }
 
+  if (value.startsWith('/login')) {
+    return '/workspaces';
+  }
+
+  if (value.includes('\n') || value.includes('\r')) {
+    return '/workspaces';
+  }
+
   return value;
 }
