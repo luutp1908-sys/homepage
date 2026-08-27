@@ -38,7 +38,7 @@ Use this as the working checklist for homepage improvements. Tick each item as t
 
 - [x] Keep direct login route support for deep links.
 - [ ] Verify modal login and return-to behavior stay consistent.
-- [ ] Simplify routing boundaries so public, authenticated, and workspace areas stay distinct.
+- [x] Simplify routing boundaries so public, authenticated, and workspace areas stay distinct.
 
 ## Cleanup and Maintainability
 
