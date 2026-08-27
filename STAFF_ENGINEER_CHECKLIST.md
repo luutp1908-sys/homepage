@@ -42,6 +42,6 @@ Use this as the working checklist for homepage improvements. Tick each item as t
 
 ## Cleanup and Maintainability
 
-- [ ] Move shared data access into a small server-only layer.
+- [x] Move shared data access into a small server-only layer.
 - [ ] Make browse pages easier to reason about and extend.
 - [ ] Remove legacy patterns once the newer flow is fully stable.
