@@ -1,4 +1,4 @@
-import type { WorkspaceSummary } from '../../../shared/workspaces/workspaces';
+import type { WorkspaceSummary } from '../../../../shared/workspaces/workspaces';
 
 type WorkspaceOverviewCardProps = {
   activeWorkspace: WorkspaceSummary | null;

@@ -1,5 +1,5 @@
 import WorkspacesPageClient from './WorkspacesPageClient';
-import { requireAuthenticated } from '../../shared/auth/routeGuard';
+import { requireAuthenticated } from '../../../shared/auth/routeGuard';
 
 export const dynamic = 'force-dynamic';
 

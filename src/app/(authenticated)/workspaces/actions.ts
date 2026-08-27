@@ -1,8 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { CreateWorkspacePayload } from '../../shared/workspaces/workspaces';
-import { createWorkspaceForServer, updateWorkspaceMemberRoleForServer } from '../../shared/services/workspacesService';
+import { CreateWorkspacePayload } from '../../../shared/workspaces/workspaces';
+import { createWorkspaceForServer, updateWorkspaceMemberRoleForServer } from '../../../shared/services/workspacesService';
 
 type RoleUpdatePayload = {
   workspaceId: string;

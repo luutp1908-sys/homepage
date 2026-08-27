@@ -1,4 +1,4 @@
-import type { WorkspaceMemberSummary } from '../../../shared/workspaces/workspaces';
+import type { WorkspaceMemberSummary } from '../../../../shared/workspaces/workspaces';
 
 type MembersQueryState = {
   isLoading: boolean;

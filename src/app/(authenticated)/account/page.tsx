@@ -1,5 +1,5 @@
-import AccountPanel from '../components/AccountPanel';
-import { requireAuthenticated } from '../../shared/auth/routeGuard';
+import AccountPanel from '../../components/AccountPanel';
+import { requireAuthenticated } from '../../../shared/auth/routeGuard';
 
 export const dynamic = 'force-dynamic';
 

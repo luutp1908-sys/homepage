@@ -1,5 +1,5 @@
 import type { ChangeEvent } from 'react';
-import type { WorkspaceSummary } from '../../../shared/workspaces/workspaces';
+import type { WorkspaceSummary } from '../../../../shared/workspaces/workspaces';
 
 type WorkspaceHeaderProps = {
   onCreateWorkspace: () => void;

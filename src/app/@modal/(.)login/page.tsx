@@ -1,5 +1,5 @@
 import LoginModalShell from './LoginModalShell';
-import { resolveNextPath } from '../../login/nextPath';
+import { resolveNextPath } from '../../(public)/login/nextPath';
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
-import { persistAuthTokens } from '../../shared/auth/getAuthHeaders';
+import { persistAuthTokens } from '../../../shared/auth/getAuthHeaders';
 
 const BE_BASE = process.env.NEXT_PUBLIC_BE_API_BASE || 'http://localhost:4000';
 

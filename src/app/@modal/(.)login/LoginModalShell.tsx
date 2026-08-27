@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import LoginPageClient from '../../login/LoginPageClient';
+import LoginPageClient from '../../(public)/login/LoginPageClient';
 
 type LoginModalShellProps = {
   nextPath?: string | null;

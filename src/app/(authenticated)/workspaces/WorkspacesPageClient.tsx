@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getAuthHeaders } from '../../shared/auth/getAuthHeaders';
+import { getAuthHeaders } from '../../../shared/auth/getAuthHeaders';
 import CreateWorkspaceModal from './CreateWorkspaceModal';
-import { CreateWorkspacePayload, fetchWorkspaceMembers, fetchWorkspaces, inviteWorkspaceMember, removeWorkspaceMember, WorkspaceSummary } from '../../shared/workspaces/workspaces';
-import { DraftSortBy, DraftSortOrder, fetchUserDrafts } from '../../shared/workspaces/userDrafts';
-import { useActiveWorkspace } from '../../shared/workspaces/useActiveWorkspace';
-import { useAuthState } from '../../shared/auth/useAuthState';
+import { CreateWorkspacePayload, fetchWorkspaceMembers, fetchWorkspaces, inviteWorkspaceMember, removeWorkspaceMember, WorkspaceSummary } from '../../../shared/workspaces/workspaces';
+import { DraftSortBy, DraftSortOrder, fetchUserDrafts } from '../../../shared/workspaces/userDrafts';
+import { useActiveWorkspace } from '../../../shared/workspaces/useActiveWorkspace';
+import { useAuthState } from '../../../shared/auth/useAuthState';
 import { createWorkspaceAction, updateWorkspaceMemberRoleAction } from './actions';
 import WorkspaceHeader from './components/WorkspaceHeader';
 import WorkspaceOverviewCard from './components/WorkspaceOverviewCard';

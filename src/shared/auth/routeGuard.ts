@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 type ApiEnvelope<T> = {
@@ -13,11 +13,48 @@ export type AuthenticatedUser = {
   permissions: string[];
 };
 
+function sanitizeRedirectPath(candidate: string | null | undefined): string {
+  if (!candidate || !candidate.startsWith('/')) {
+    return '/workspaces';
+  }
+
+  if (candidate.startsWith('//')) {
+    return '/workspaces';
+  }
+
+  if (candidate.startsWith('/login')) {
+    return '/workspaces';
+  }
+
+  if (candidate.includes('\n') || candidate.includes('\r')) {
+    return '/workspaces';
+  }
+
+  return candidate;
+}
+
+export async function resolveCurrentNextPath(): Promise<string> {
+  const requestHeaders = await headers();
+  const rawPath =
+    requestHeaders.get('x-invoke-path') ??
+    requestHeaders.get('x-forwarded-uri') ??
+    requestHeaders.get('x-pathname') ??
+    '/workspaces';
+
+  try {
+    const parsed = new URL(rawPath, 'http://localhost');
+    return sanitizeRedirectPath(parsed.pathname || '/workspaces');
+  } catch {
+    return sanitizeRedirectPath(rawPath);
+  }
+}
+
 function redirectToLogin(nextPath: string): never {
   redirect(`/login?next=${encodeURIComponent(nextPath)}`);
 }
 
-export async function requireAuthenticated(nextPath: string): Promise<AuthenticatedUser> {
+export async function requireAuthenticated(nextPath?: string): Promise<AuthenticatedUser> {
+  const resolvedNextPath = sanitizeRedirectPath(nextPath ?? (await resolveCurrentNextPath()));
   const cookieStore = await cookies();
   const accessToken = cookieStore.get('access_token')?.value;
   const cookieHeader = cookieStore
@@ -26,7 +63,7 @@ export async function requireAuthenticated(nextPath: string): Promise<Authentica
     .join('; ');
 
   if (!accessToken && !cookieHeader) {
-    redirectToLogin(nextPath);
+    redirectToLogin(resolvedNextPath);
   }
 
   const beBase = process.env.BE_URL ?? 'http://localhost:4000';
@@ -50,18 +87,18 @@ export async function requireAuthenticated(nextPath: string): Promise<Authentica
     });
 
     if (!response.ok) {
-      redirectToLogin(nextPath);
+      redirectToLogin(resolvedNextPath);
     }
 
     const payload = (await response.json()) as ApiEnvelope<AuthenticatedUser>;
     const user = payload?.data;
 
     if (!user?.id) {
-      redirectToLogin(nextPath);
+      redirectToLogin(resolvedNextPath);
     }
 
     return user;
   } catch {
-    redirectToLogin(nextPath);
+    redirectToLogin(resolvedNextPath);
   }
 }

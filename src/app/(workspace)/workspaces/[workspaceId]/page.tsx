@@ -1,5 +1,5 @@
 import WorkspaceLegacyRedirectClient from './WorkspaceLegacyRedirectClient';
-import { requireAuthenticated } from '../../../shared/auth/routeGuard';
+import { requireAuthenticated } from '../../../../shared/auth/routeGuard';
 import { notFound } from 'next/navigation';
 
 export const metadata = {
