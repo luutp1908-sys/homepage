@@ -4,14 +4,15 @@ import Link from 'next/link';
 import { useAuthState } from '../../shared/auth/useAuthState';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const {  isLoading } = useAuthState();
+  const { isAuthenticated, isLoading } = useAuthState();
+  const workspaceHref = isAuthenticated ? '/workspaces' : { pathname: '/login', query: { next: '/workspaces' } };
 
   return (
     <div className="min-h-screen bg-zinc-50">
       {!isLoading ? (
         <aside className="fixed left-0 top-0 z-40 flex h-screen w-20 flex-col items-center border-r border-zinc-200 bg-white py-4 shadow-sm">
           <Link
-            href="/workspaces"
+            href={workspaceHref}
             title="Workspace"
             aria-label="Workspace"
             className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 text-zinc-700 transition-colors hover:bg-zinc-200"

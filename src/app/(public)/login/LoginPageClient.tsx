@@ -46,7 +46,13 @@ export default function LoginPageClient({ variant = 'page', nextPath }: LoginPag
 
       persistAuthTokens(token, refreshToken);
 
+      if (variant === 'modal') {
+        window.location.replace(resolvedNextPath);
+        return;
+      }
+
       router.replace(resolvedNextPath);
+      router.refresh();
     } catch (err: any) {
       setError(err?.message ?? 'Login failed');
     } finally {

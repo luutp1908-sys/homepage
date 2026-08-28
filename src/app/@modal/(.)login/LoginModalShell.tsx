@@ -11,11 +11,6 @@ export default function LoginModalShell({ nextPath }: LoginModalShellProps) {
   const router = useRouter();
 
   const handleClose = () => {
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      router.back();
-      return;
-    }
-
     router.replace('/');
   };
 
