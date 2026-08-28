@@ -4,11 +4,11 @@ import Link from 'next/link';
 import { useAuthState } from '../../shared/auth/useAuthState';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuthState();
+  const {  isLoading } = useAuthState();
 
   return (
     <div className="min-h-screen bg-zinc-50">
-      {!isLoading && isAuthenticated ? (
+      {!isLoading ? (
         <aside className="fixed left-0 top-0 z-40 flex h-screen w-20 flex-col items-center border-r border-zinc-200 bg-white py-4 shadow-sm">
           <Link
             href="/workspaces"
@@ -37,7 +37,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </aside>
       ) : null}
 
-      <div className={!isLoading && isAuthenticated ? 'ml-20 flex min-h-screen flex-col' : 'flex min-h-screen flex-col'}>
+      <div className={!isLoading ? 'ml-20 flex min-h-screen flex-col' : 'flex min-h-screen flex-col'}>
         {children}
       </div>
     </div>

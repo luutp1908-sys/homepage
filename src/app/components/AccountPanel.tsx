@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getAuthHeaders } from '../../shared/auth/getAuthHeaders';
-import { changePasswordAction, updateProfileAction } from '../account/actions';
+import { changePasswordAction, updateProfileAction } from '../(authenticated)/account/actions';
 
 type Profile = {
   id?: string;
