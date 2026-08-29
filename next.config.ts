@@ -1,7 +1,21 @@
 import type { NextConfig } from "next";
 import path from "node:path";
 
-const editorRemoteBase = (process.env.NEXT_PUBLIC_EDITOR_REMOTE_URL ?? 'http://localhost:5174').replace(/\/+$/, '');
+function resolveEditorRemoteBase() {
+  const explicit = process.env.NEXT_PUBLIC_EDITOR_REMOTE_URL;
+  if (explicit) {
+    return explicit.replace(/\/+$/, '');
+  }
+
+  const fallback =
+    process.env.NODE_ENV === 'production'
+      ? process.env.NEXT_PUBLIC_EDITOR_REMOTE_URL_PROD
+      : process.env.NEXT_PUBLIC_EDITOR_REMOTE_URL_LOCAL;
+
+  return (fallback ?? 'http://localhost:5174').replace(/\/+$/, '');
+}
+
+const editorRemoteBase = resolveEditorRemoteBase();
 
 const nextConfig: NextConfig = {
   turbopack: {
