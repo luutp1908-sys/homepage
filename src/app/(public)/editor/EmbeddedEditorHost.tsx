@@ -3,8 +3,21 @@
 import { Suspense } from 'react';
 import type { ReactNode } from 'react';
 import React from 'react';
+import { useAuthState } from '../../../shared/auth/useAuthState';
 
 const RemoteEditor = React.lazy(() => import('editor/EditorRemoteEntry'));
+
+function readCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+
+  const value = document.cookie
+    .split(';')
+    .map((item) => item.trim())
+    .find((item) => item.startsWith(`${name}=`));
+
+  if (!value) return null;
+  return decodeURIComponent(value.slice(name.length + 1));
+}
 
 type LoaderErrorBoundaryProps = {
   children: ReactNode;
@@ -56,12 +69,21 @@ function RemoteErrorFallback() {
 }
 
 export default function EmbeddedEditorHost() {
+  const { user, isLoading } = useAuthState();
+
   return (
     <div className="flex flex-1 bg-zinc-50">
       <main className="mx-auto flex w-full max-w-5xl flex-1 px-6 py-8">
         <LoaderErrorBoundary fallback={<RemoteErrorFallback />}>
           <Suspense fallback={<RemoteLoadingFallback />}>
-            <RemoteEditor />
+            <RemoteEditor
+              isEmbedded
+              auth={{
+                user,
+                accessToken: readCookie('access_token'),
+                isLoading,
+              }}
+            />
           </Suspense>
         </LoaderErrorBoundary>
       </main>

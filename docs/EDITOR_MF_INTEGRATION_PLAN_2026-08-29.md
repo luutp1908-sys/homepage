@@ -35,15 +35,15 @@ Constraints:
 
 ### Phase 3: Embedded Mode Contract
 
-- [ ] Add embedded contract (isEmbedded, auth bridge, callbacks) in editor exposed entry.
-- [ ] Refactor editor app composition for standalone vs embedded mode.
-- [ ] Hide editor top header in embedded mode.
-- [ ] Disable editor login modal in embedded mode.
-- [ ] Keep standalone mode behavior unchanged.
+- [x] Add embedded contract (isEmbedded, auth bridge, callbacks) in editor exposed entry.
+- [x] Refactor editor app composition for standalone vs embedded mode.
+- [x] Hide editor top header in embedded mode.
+- [x] Disable editor login modal in embedded mode.
+- [x] Keep standalone mode behavior unchanged.
 
 ### Phase 4: Auth Source of Truth
 
-- [ ] Wire homepage auth state into embedded editor.
+- [x] Wire homepage auth state into embedded editor.
 - [ ] In embedded mode, bypass editor-owned auth bootstrap/refresh ownership.
 - [ ] Delegate login prompts to homepage modal only.
 - [ ] Verify logout/login state changes reflect immediately in embedded editor.
