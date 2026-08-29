@@ -29,6 +29,12 @@ function getStoredAccessToken(): string | null {
   return null;
 }
 
+function notifyAuthStateChanged() {
+  if (typeof window === 'undefined') return;
+
+  window.dispatchEvent(new CustomEvent('homepage-auth-changed'));
+}
+
 export function getAuthHeaders() {
   const token = getStoredAccessToken();
   return token ? { Authorization: `Bearer ${token}` } : undefined;
@@ -46,6 +52,7 @@ export function persistAuthTokens(accessToken?: string | null, refreshToken?: st
   }
 
   window.sessionStorage.removeItem('homepage_access_token');
+  notifyAuthStateChanged();
 }
 
 export function clearStoredAuthTokens() {
@@ -54,4 +61,5 @@ export function clearStoredAuthTokens() {
   document.cookie = 'access_token=; Path=/; Max-Age=0; SameSite=Lax';
   document.cookie = 'refresh_token=; Path=/; Max-Age=0; SameSite=Lax';
   window.sessionStorage.removeItem('homepage_access_token');
+  notifyAuthStateChanged();
 }

@@ -46,7 +46,7 @@ Constraints:
 - [x] Wire homepage auth state into embedded editor.
 - [x] In embedded mode, bypass editor-owned auth bootstrap/refresh ownership.
 - [x] Delegate login prompts to homepage modal only.
-- [ ] Verify logout/login state changes reflect immediately in embedded editor.
+- [x] Verify logout/login state changes reflect immediately in embedded editor.
 
 ### Phase 5: Verification + Rollback
 

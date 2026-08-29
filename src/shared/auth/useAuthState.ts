@@ -41,8 +41,15 @@ export function useAuthState() {
 
     run();
 
+    const handleAuthChanged = () => {
+      void run();
+    };
+
+    window.addEventListener('homepage-auth-changed', handleAuthChanged as EventListener);
+
     return () => {
       cancelled = true;
+      window.removeEventListener('homepage-auth-changed', handleAuthChanged as EventListener);
     };
   }, []);
 
