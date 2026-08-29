@@ -30,7 +30,7 @@ Constraints:
 
 - [x] Configure fe/apps/editor as federated remote and expose embedded entry.
 - [x] Configure homepage as federated host and register editor remote.
-- [ ] Implement remote loader with suspense + error fallback in homepage.
+- [x] Implement remote loader with suspense + error fallback in homepage.
 - [ ] Add environment mapping for remote URL (local/prod placeholder).
 
 ### Phase 3: Embedded Mode Contract
