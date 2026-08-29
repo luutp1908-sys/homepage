@@ -3,6 +3,7 @@
 import { Suspense } from 'react';
 import type { ReactNode } from 'react';
 import React from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuthState } from '../../../shared/auth/useAuthState';
 
 const RemoteEditor = React.lazy(() => import('editor/EditorRemoteEntry'));
@@ -70,6 +71,11 @@ function RemoteErrorFallback() {
 
 export default function EmbeddedEditorHost() {
   const { user, isLoading } = useAuthState();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const nextPath = `${pathname}${searchParams?.toString() ? `?${searchParams.toString()}` : ''}`;
 
   return (
     <div className="flex flex-1 bg-zinc-50">
@@ -82,6 +88,11 @@ export default function EmbeddedEditorHost() {
                 user,
                 accessToken: readCookie('access_token'),
                 isLoading,
+              }}
+              callbacks={{
+                onRequestLogin: () => {
+                  router.push(`/login?next=${encodeURIComponent(nextPath)}`);
+                },
               }}
             />
           </Suspense>
