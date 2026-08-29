@@ -14,9 +14,18 @@ type Props = {
   searchParams?: { [key: string]: string | string[] | undefined };
 };
 
+function pickSingleParam(value: string | string[] | undefined) {
+  if (Array.isArray(value)) {
+    return value[0] ?? undefined;
+  }
+
+  return value;
+}
+
 export default async function TemplateList({ searchParams }: Props) {
   const cookieStore = await cookies();
   const workspaceId = cookieStore.get(ACTIVE_WORKSPACE_STORAGE_KEY)?.value;
+  const adminEdit = pickSingleParam(searchParams?.adminEdit);
   const { items, errorMessage } = await loadTemplates(searchParams);
   if (errorMessage) {
     return (
@@ -36,6 +45,9 @@ export default async function TemplateList({ searchParams }: Props) {
             const editorQuery = new URLSearchParams({ templateId: String(t.id) });
             if (workspaceId) {
               editorQuery.set('workspaceId', String(workspaceId));
+            }
+            if (adminEdit) {
+              editorQuery.set('adminEdit', String(adminEdit));
             }
             const editorUrl = `/editor?${editorQuery.toString()}`;
 

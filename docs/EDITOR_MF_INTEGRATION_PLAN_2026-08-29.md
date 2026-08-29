@@ -24,7 +24,7 @@ Constraints:
 - [x] Add dedicated embedded editor route at /editor under public area.
 - [x] Ensure /editor renders inside existing homepage shell (sidebar + header).
 - [x] Change template list cards to navigate internally to /editor (no target _blank).
-- [ ] Preserve query params: templateId, workspaceId, adminEdit.
+- [x] Preserve query params: templateId, workspaceId, adminEdit.
 
 ### Phase 2: Federation Infrastructure
 
