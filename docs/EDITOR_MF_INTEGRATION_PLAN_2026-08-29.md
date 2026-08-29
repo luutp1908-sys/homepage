@@ -22,7 +22,7 @@ Constraints:
 ### Phase 1: Route + Navigation
 
 - [x] Add dedicated embedded editor route at /editor under public area.
-- [ ] Ensure /editor renders inside existing homepage shell (sidebar + header).
+- [x] Ensure /editor renders inside existing homepage shell (sidebar + header).
 - [ ] Change template list cards to navigate internally to /editor (no target _blank).
 - [ ] Preserve query params: templateId, workspaceId, adminEdit.
 
