@@ -1,5 +1,6 @@
 import React from 'react';
 import { cookies } from 'next/headers';
+import Link from 'next/link';
 import { ACTIVE_WORKSPACE_STORAGE_KEY } from '../../shared/workspaces/constants';
 import { loadTemplates } from './loaders';
 
@@ -27,8 +28,6 @@ export default async function TemplateList({ searchParams }: Props) {
     return <div className="p-6">No templates found.</div>;
   }
 
-  const editorBase = (process.env.NEXT_PUBLIC_EDITOR_APP_URL || 'http://localhost:5174').replace(/\/+$/, '');
-
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 p-6">
       {items.map((t) => (
@@ -38,18 +37,16 @@ export default async function TemplateList({ searchParams }: Props) {
             if (workspaceId) {
               editorQuery.set('workspaceId', String(workspaceId));
             }
-            const editorUrl = `${editorBase}?${editorQuery.toString()}`;
+            const editorUrl = `/editor?${editorQuery.toString()}`;
 
             return (
-          <a
+          <Link
             href={editorUrl}
-            target="_blank"
-            rel="noopener noreferrer"
             className="block"
           >
             <h3 className="text-lg font-semibold">{t.title}</h3>
             <p className="text-sm text-zinc-600">{t.slug}</p>
-          </a>
+          </Link>
             );
           })()}
         </article>
