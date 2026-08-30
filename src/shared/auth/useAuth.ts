@@ -52,6 +52,11 @@ export async function loginWithEmailPassword(email: string, password: string) {
 
 export async function fetchCurrentUser() {
   const headers = getAuthHeaders();
+
+  if (!headers?.Authorization) {
+    return null;
+  }
+
   try {
     const res = await fetch('/api/user/me', {
       cache: 'no-store',

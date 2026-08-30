@@ -1,8 +1,10 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import React from 'react';
+import * as ReactDOM from 'react-dom';
+import * as ReactQuery from '@tanstack/react-query';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { init, loadRemote, registerRemotes } from '@module-federation/runtime';
 import { useAuthState } from '../../../shared/auth/useAuthState';
@@ -21,28 +23,89 @@ function ensureRemoteRuntime() {
 
   init({
     name: 'homepage',
-    remotes: [{ name: REMOTE_NAME, entry: REMOTE_ENTRY_URL }],
-    shared: {},
+    remotes: [{ name: REMOTE_NAME, entry: REMOTE_ENTRY_URL, type: 'module' }],
+    shared: {
+      react: {
+        version: '18.3.1',
+        lib: () => React,
+        shareConfig: {
+          singleton: false,
+          eager: false,
+          requiredVersion: '18.3.1',
+        },
+      },
+      'react-dom': {
+        version: '18.3.1',
+        lib: () => ReactDOM,
+        shareConfig: {
+          singleton: false,
+          eager: false,
+          requiredVersion: '18.3.1',
+        },
+      },
+      '@tanstack/react-query': {
+        version: '5.101.4',
+        lib: () => ReactQuery,
+        shareConfig: {
+          singleton: false,
+          eager: false,
+          requiredVersion: '5.101.4',
+        },
+      },
+    },
   });
 
-  registerRemotes([{ name: REMOTE_NAME, entry: REMOTE_ENTRY_URL }]);
+  // Let the host and remote keep their own React copies so the Next runtime does
+  // not collide with the editor's Vite runtime when loading the remote bundle.
+  registerRemotes([{ name: REMOTE_NAME, entry: REMOTE_ENTRY_URL, type: 'module' }]);
   runtimeInitialized = true;
 }
 
-const RemoteEditor = React.lazy(async () => {
-  ensureRemoteRuntime();
+type RemoteEditorComponent = React.ComponentType<any>;
 
-  const remoteModule = await loadRemote<{ default: React.ComponentType<any> }>(
-    `${REMOTE_NAME}/EditorRemoteEntry`,
-    { from: 'runtime' }
-  );
+function useRemoteEditor() {
+  const [RemoteEditor, setRemoteEditor] = useState<RemoteEditorComponent | null>(null);
+  const [error, setError] = useState<Error | null>(null);
 
-  if (!remoteModule?.default) {
-    throw new Error('Editor remote did not resolve a default export');
-  }
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
 
-  return { default: remoteModule.default };
-});
+    let active = true;
+
+    const loadEditor = async () => {
+      try {
+        ensureRemoteRuntime();
+
+        const remoteModule = await loadRemote<{ default: RemoteEditorComponent }>(
+          `${REMOTE_NAME}/EditorRemoteEntry`,
+          { from: 'runtime' }
+        );
+
+        if (!active) return;
+
+        if (!remoteModule?.default) {
+          throw new Error('Editor remote did not resolve a default export');
+        }
+
+        setRemoteEditor(() => remoteModule.default);
+        setError(null);
+      } catch (caughtError) {
+        if (!active) return;
+        setError(caughtError instanceof Error ? caughtError : new Error('Failed to load federated editor remote'));
+      }
+    };
+
+    void loadEditor();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return { RemoteEditor, error };
+}
 
 function readCookie(name: string): string | null {
   if (typeof document === 'undefined') return null;
@@ -110,8 +173,17 @@ export default function EmbeddedEditorHost() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { RemoteEditor, error } = useRemoteEditor();
 
   const nextPath = `${pathname}${searchParams?.toString() ? `?${searchParams.toString()}` : ''}`;
+
+  if (error) {
+    return <RemoteErrorFallback />;
+  }
+
+  if (!RemoteEditor) {
+    return <RemoteLoadingFallback />;
+  }
 
   return (
     <div className="flex flex-1 bg-zinc-50">

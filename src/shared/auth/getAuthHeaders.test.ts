@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { clearStoredAuthTokens, getAuthHeaders, persistAuthTokens } from './getAuthHeaders';
+import { fetchCurrentUser } from './useAuth';
 
 class MockSessionStorage {
   private store = new Map<string, string>();
@@ -41,11 +42,14 @@ function setupBrowserMocks() {
     },
   });
 
+  const windowMock = {
+    sessionStorage,
+    dispatchEvent: vi.fn(),
+  };
+
   Object.defineProperty(globalThis, 'window', {
     configurable: true,
-    value: {
-      sessionStorage,
-    },
+    value: windowMock,
   });
 
   Object.defineProperty(globalThis, 'document', {
@@ -94,5 +98,18 @@ describe('getAuthHeaders', () => {
     sessionStorage.setItem('homepage_access_token', 'legacy-token-2');
     clearStoredAuthTokens();
     expect(sessionStorage.getItem('homepage_access_token')).toBeNull();
+  });
+
+  it('returns null without issuing a user lookup when there is no access token', async () => {
+    setupBrowserMocks();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 401,
+    } as Response);
+
+    const user = await fetchCurrentUser();
+
+    expect(user).toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
