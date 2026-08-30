@@ -6,7 +6,12 @@ import React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuthState } from '../../../shared/auth/useAuthState';
 
-const RemoteEditor = React.lazy(() => import('editor/EditorRemoteEntry'));
+const RemoteEditor = React.lazy(async () => {
+  const importer = new Function('specifier', 'return import(specifier)') as (
+    specifier: string
+  ) => Promise<{ default: React.ComponentType<any> }>;
+  return importer('editor/EditorRemoteEntry');
+});
 
 function readCookie(name: string): string | null {
   if (typeof document === 'undefined') return null;
