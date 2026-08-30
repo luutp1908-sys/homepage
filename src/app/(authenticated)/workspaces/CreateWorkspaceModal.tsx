@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
-import { CreateWorkspacePayload, WorkspaceType } from '../../shared/workspaces/workspaces';
+import { CreateWorkspacePayload, WorkspaceType } from '../../../shared/workspaces/workspaces';
 
 type CreateWorkspaceModalProps = {
   open: boolean;

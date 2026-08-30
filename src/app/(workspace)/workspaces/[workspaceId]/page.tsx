@@ -8,7 +8,7 @@ export const metadata = {
 };
 
 type WorkspaceByIdPageProps = {
-  params: { workspaceId: string } | Promise<{ workspaceId: string }>;
+  params: Promise<{ workspaceId: string }>;
 };
 
 function isUuid(value: string) {

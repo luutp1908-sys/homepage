@@ -13,7 +13,7 @@ type SearchParams = { [key: string]: string | string[] | undefined };
 
 export const revalidate = 60;
 
-export async function generateMetadata({ params }: { params: PageParams | Promise<PageParams> }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<PageParams> }): Promise<Metadata> {
   const paramsValue = await resolveMaybePromise(params);
   const categories = await fetchCategories();
   const category = categories.find((item: any) => item.slug === paramsValue.categorySlug);
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: { params: PageParams | Promis
   });
 }
 
-export default async function CategoryPage({ params, searchParams }: { params: PageParams | Promise<PageParams>, searchParams?: SearchParams | Promise<SearchParams> }) {
+export default async function CategoryPage({ params, searchParams }: { params: Promise<PageParams>, searchParams?: Promise<SearchParams> }) {
   const paramsValue = await resolveMaybePromise(params);
   const categories = await fetchCategories();
   const category = categories.find((item: any) => item.slug === paramsValue.categorySlug);

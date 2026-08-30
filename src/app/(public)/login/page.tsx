@@ -4,7 +4,7 @@ import { resolveNextPath } from './nextPath';
 type SearchParams = { [key: string]: string | string[] | undefined };
 
 type LoginPageProps = {
-  searchParams?: SearchParams | Promise<SearchParams>;
+  searchParams?: Promise<SearchParams>;
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {

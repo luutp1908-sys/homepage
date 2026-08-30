@@ -4,7 +4,7 @@ import { resolveNextPath } from '../../(public)/login/nextPath';
 type SearchParams = { [key: string]: string | string[] | undefined };
 
 type LoginModalRouteProps = {
-  searchParams?: SearchParams | Promise<SearchParams>;
+  searchParams?: Promise<SearchParams>;
 };
 
 export default async function LoginModalRoute({ searchParams }: LoginModalRouteProps) {

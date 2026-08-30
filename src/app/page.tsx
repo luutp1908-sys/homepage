@@ -11,7 +11,7 @@ type SearchParams = { [key: string]: string | string[] | undefined };
 
 export const revalidate = 60;
 
-export async function generateMetadata({ searchParams }: { searchParams?: SearchParams | Promise<SearchParams> }): Promise<Metadata> {
+export async function generateMetadata({ searchParams }: { searchParams?: Promise<SearchParams> }): Promise<Metadata> {
   const resolvedSearchParams = await resolveMaybePromise(searchParams ?? {});
   const categories = await fetchCategories(resolvedSearchParams);
   const categoryWithSeo = categories.find((c: any) => c?.seo);
@@ -24,7 +24,7 @@ export async function generateMetadata({ searchParams }: { searchParams?: Search
   });
 }
 
-export default async function Home({ searchParams }: { searchParams?: SearchParams | Promise<SearchParams> }) {
+export default async function Home({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const resolvedSearchParams = await resolveMaybePromise(searchParams ?? {});
 
   const categoriesKey = JSON.stringify(resolvedSearchParams);

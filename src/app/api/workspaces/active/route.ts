@@ -120,7 +120,7 @@ export async function GET(request: Request) {
     });
 
     if (value) {
-      response.cookies.delete(ACTIVE_WORKSPACE_COOKIE, { path: '/' });
+      response.cookies.delete(ACTIVE_WORKSPACE_COOKIE);
     }
 
     return withCors(request, response);
@@ -142,7 +142,7 @@ export async function GET(request: Request) {
   );
 
   if (!isStoredValueValid) {
-    response.cookies.delete(ACTIVE_WORKSPACE_COOKIE, { path: '/' });
+    response.cookies.delete(ACTIVE_WORKSPACE_COOKIE);
   }
 
   return withCors(request, response);

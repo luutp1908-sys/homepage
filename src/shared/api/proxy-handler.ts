@@ -23,8 +23,10 @@ export async function forwardProxyRequest(options: ForwardProxyOptions): Promise
     if (methodHasBody(method)) {
       if (validateBody) {
         const validation = await validateJsonBody(request);
-        if ('error' in validation) {
-          return validation.error;
+        const validationError = 'error' in validation ? validation.error : undefined;
+
+        if (validationError) {
+          return validationError;
         }
 
         body = validation.body;

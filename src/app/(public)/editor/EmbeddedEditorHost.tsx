@@ -4,13 +4,44 @@ import { Suspense } from 'react';
 import type { ReactNode } from 'react';
 import React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { init, loadRemote, registerRemotes } from '@module-federation/runtime';
 import { useAuthState } from '../../../shared/auth/useAuthState';
 
+const REMOTE_NAME = 'editor';
+const REMOTE_ENTRY_URL =
+  (process.env.NEXT_PUBLIC_EDITOR_REMOTE_URL_LOCAL ?? 'http://localhost:5174').replace(/\/$/, '') +
+  '/remoteEntry.js';
+
+let runtimeInitialized = false;
+
+function ensureRemoteRuntime() {
+  if (runtimeInitialized) {
+    return;
+  }
+
+  init({
+    name: 'homepage',
+    remotes: [{ name: REMOTE_NAME, entry: REMOTE_ENTRY_URL }],
+    shared: {},
+  });
+
+  registerRemotes([{ name: REMOTE_NAME, entry: REMOTE_ENTRY_URL }]);
+  runtimeInitialized = true;
+}
+
 const RemoteEditor = React.lazy(async () => {
-  const importer = new Function('specifier', 'return import(specifier)') as (
-    specifier: string
-  ) => Promise<{ default: React.ComponentType<any> }>;
-  return importer('editor/EditorRemoteEntry');
+  ensureRemoteRuntime();
+
+  const remoteModule = await loadRemote<{ default: React.ComponentType<any> }>(
+    `${REMOTE_NAME}/EditorRemoteEntry`,
+    { from: 'runtime' }
+  );
+
+  if (!remoteModule?.default) {
+    throw new Error('Editor remote did not resolve a default export');
+  }
+
+  return { default: remoteModule.default };
 });
 
 function readCookie(name: string): string | null {
