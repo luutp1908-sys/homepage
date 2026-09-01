@@ -9,7 +9,7 @@ async function proxyCategory(request: Request, method: 'GET' | 'POST' | 'PUT' | 
   });
 
   if (response.ok && method !== 'GET') {
-      revalidateTag('categories', 'max');
+    revalidateTag('categories');
   }
 
   return response;

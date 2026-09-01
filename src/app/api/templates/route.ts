@@ -9,7 +9,7 @@ async function proxyTemplate(request: Request, method: 'GET' | 'POST' | 'PUT' | 
   });
 
   if (response.ok && method !== 'GET') {
-      revalidateTag('templates', 'max');
+    revalidateTag('templates');
   }
 
   return response;

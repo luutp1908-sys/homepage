@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  webpack(config) {
+  webpack(config: import('webpack').Configuration) {
     return config;
   },
 };
