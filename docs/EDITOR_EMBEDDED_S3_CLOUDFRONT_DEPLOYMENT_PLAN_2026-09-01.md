@@ -14,7 +14,7 @@ Deploy fe/apps/editor as a Module Federation remote hosted on S3 + CloudFront, a
 
 ## Plan
 - [x] Freeze integration contract: homepage mounts editor remote component and reads production remote URL from env.
-- [ ] Set editor production env values in fe/apps/editor/.env.production.
+- [x] Set editor production env values in fe/apps/editor/.env.production.
 - [ ] Build editor artifact with yarn build:editor and verify dist/apps/editor outputs.
 - [ ] Provision S3 + CloudFront + OAC + TLS + DNS via Terraform.
 - [ ] Apply cache policy for federation files.
@@ -34,12 +34,12 @@ Deploy fe/apps/editor as a Module Federation remote hosted on S3 + CloudFront, a
   - [x] Loader normalizes to a final remote entry URL ending with /remoteEntry.js.
 
 ### 2) Editor Env Setup
-- [ ] File: fe/apps/editor/.env.production
+- [x] File: fe/apps/editor/.env.production
 - Required:
-  - [ ] VITE_API_ORIGIN=https://your-api-domain
+  - [x] VITE_API_ORIGIN set to backend ALB origin.
 - Optional:
-  - [ ] VITE_HOMEPAGE_ORIGIN=https://your-homepage-domain
-- [ ] Validate editor does not rely on localhost fallback in production.
+  - [x] VITE_HOMEPAGE_ORIGIN set to temporary editor CDN origin until homepage is deployed.
+- [x] Validate editor does not rely on localhost fallback in production.
 
 ### 3) Build Artifact
 - [ ] Command:
@@ -100,7 +100,7 @@ Legend:
 | ID | Task | Status | Owner | Target Date | Notes |
 |---|---|---|---|---|---|
 | T1 | Freeze integration contract | [x] | FE | 2026-09-02 | Loader contract implemented in EmbeddedEditorHost.tsx |
-| T2 | Configure editor production env | [ ] | FE | 2026-09-02 | |
+| T2 | Configure editor production env | [x] | FE | 2026-09-02 | fe/apps/editor/.env.production created with API and temporary homepage origins |
 | T3 | Build and verify editor artifact | [ ] | FE | 2026-09-02 | |
 | T4 | Provision S3 + CloudFront + OAC + TLS + DNS | [ ] | Infra | 2026-09-04 | |
 | T5 | Apply cache policy for federation assets | [ ] | Infra | 2026-09-04 | |
@@ -113,9 +113,10 @@ Legend:
 ## Tracker Update Log
 - 2026-09-01: Plan created.
 - 2026-09-01: T1 completed. Homepage loader now resolves NEXT_PUBLIC_EDITOR_REMOTE_URL / NEXT_PUBLIC_EDITOR_REMOTE_URL_PROD and normalizes final remoteEntry.js URL.
+- 2026-09-01: T2 completed. Created fe/apps/editor/.env.production with VITE_API_ORIGIN and temporary VITE_HOMEPAGE_ORIGIN.
 
 ## Deployment Readiness Checklist
-- [ ] Editor production env file reviewed.
+- [x] Editor production env file reviewed.
 - [ ] Build output verified locally.
 - [ ] S3 bucket and CloudFront distribution created.
 - [ ] CloudFront cache behavior configured.
