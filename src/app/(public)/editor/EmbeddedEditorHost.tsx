@@ -10,9 +10,19 @@ import { init, loadRemote, registerRemotes } from '@module-federation/runtime';
 import { useAuthState } from '../../../shared/auth/useAuthState';
 
 const REMOTE_NAME = 'editor';
-const REMOTE_ENTRY_URL =
-  (process.env.NEXT_PUBLIC_EDITOR_REMOTE_URL_LOCAL ?? 'http://localhost:5174').replace(/\/$/, '') +
-  '/remoteEntry.js';
+
+function resolveRemoteEntryUrl() {
+  const configuredUrl =
+    process.env.NEXT_PUBLIC_EDITOR_REMOTE_URL ??
+    process.env.NEXT_PUBLIC_EDITOR_REMOTE_URL_PROD ??
+    process.env.NEXT_PUBLIC_EDITOR_REMOTE_URL_LOCAL ??
+    'http://localhost:5174';
+
+  const trimmed = configuredUrl.replace(/\/$/, '');
+  return trimmed.endsWith('/remoteEntry.js') ? trimmed : `${trimmed}/remoteEntry.js`;
+}
+
+const REMOTE_ENTRY_URL = resolveRemoteEntryUrl();
 
 let runtimeInitialized = false;
 

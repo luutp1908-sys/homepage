@@ -13,7 +13,7 @@ Deploy fe/apps/editor as a Module Federation remote hosted on S3 + CloudFront, a
 - S3 + CloudFront serve editor static assets only (including remoteEntry.js and hashed chunks).
 
 ## Plan
-- [ ] Freeze integration contract: homepage mounts editor remote component and reads production remote URL from env.
+- [x] Freeze integration contract: homepage mounts editor remote component and reads production remote URL from env.
 - [ ] Set editor production env values in fe/apps/editor/.env.production.
 - [ ] Build editor artifact with yarn build:editor and verify dist/apps/editor outputs.
 - [ ] Provision S3 + CloudFront + OAC + TLS + DNS via Terraform.
@@ -26,8 +26,12 @@ Deploy fe/apps/editor as a Module Federation remote hosted on S3 + CloudFront, a
 
 ## Detailed Tasks
 ### 1) Integration Contract
-- [ ] Confirm homepage uses NEXT_PUBLIC_EDITOR_REMOTE_URL_PROD for remote loading.
-- [ ] Confirm final remote URL format expected by homepage loader.
+- [x] Confirm homepage uses NEXT_PUBLIC_EDITOR_REMOTE_URL_PROD for remote loading.
+- [x] Confirm final remote URL format expected by homepage loader.
+- [x] Contract details:
+  - [x] Env precedence is NEXT_PUBLIC_EDITOR_REMOTE_URL -> NEXT_PUBLIC_EDITOR_REMOTE_URL_PROD -> NEXT_PUBLIC_EDITOR_REMOTE_URL_LOCAL -> http://localhost:5174.
+  - [x] Supported values: base URL (for example https://cdn.example.com/editor) or full remote entry URL (for example https://cdn.example.com/editor/remoteEntry.js).
+  - [x] Loader normalizes to a final remote entry URL ending with /remoteEntry.js.
 
 ### 2) Editor Env Setup
 - [ ] File: fe/apps/editor/.env.production
@@ -95,7 +99,7 @@ Legend:
 
 | ID | Task | Status | Owner | Target Date | Notes |
 |---|---|---|---|---|---|
-| T1 | Freeze integration contract | [ ] | FE | 2026-09-02 | |
+| T1 | Freeze integration contract | [x] | FE | 2026-09-02 | Loader contract implemented in EmbeddedEditorHost.tsx |
 | T2 | Configure editor production env | [ ] | FE | 2026-09-02 | |
 | T3 | Build and verify editor artifact | [ ] | FE | 2026-09-02 | |
 | T4 | Provision S3 + CloudFront + OAC + TLS + DNS | [ ] | Infra | 2026-09-04 | |
@@ -108,6 +112,7 @@ Legend:
 
 ## Tracker Update Log
 - 2026-09-01: Plan created.
+- 2026-09-01: T1 completed. Homepage loader now resolves NEXT_PUBLIC_EDITOR_REMOTE_URL / NEXT_PUBLIC_EDITOR_REMOTE_URL_PROD and normalizes final remoteEntry.js URL.
 
 ## Deployment Readiness Checklist
 - [ ] Editor production env file reviewed.
