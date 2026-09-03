@@ -49,7 +49,7 @@ function buildQuery(params: SearchParams, exclude: string[] = []) {
 export async function loadCategories(searchParams?: SearchParams | Promise<SearchParams>) {
   const resolved = await resolveParams(searchParams);
   const query = buildQuery(resolved, ['categorySlug', 'workspaceId']);
-  const apiPath = `/api/v1/category${query.toString() ? `?${query.toString()}` : ''}`;
+  const apiPath = `/api/categories${query.toString() ? `?${query.toString()}` : ''}`;
   const result = await fetchCategoriesByPath(apiPath, CATEGORY_CACHE_OPTIONS);
 
   return {
@@ -65,7 +65,7 @@ export async function loadTemplates(searchParams?: SearchParams | Promise<Search
 
   if (!query.get('categoryId') && resolved?.categorySlug) {
     const slug = Array.isArray(resolved.categorySlug) ? resolved.categorySlug[0] : String(resolved.categorySlug);
-    const categories = await fetchCategoriesByPath('/api/v1/category', CATEGORY_CACHE_OPTIONS);
+    const categories = await fetchCategoriesByPath('/api/categories', CATEGORY_CACHE_OPTIONS);
 
     if (!categories.errorMessage) {
       const categoryId = findCategoryIdBySlug(categories.items, slug);
@@ -77,7 +77,7 @@ export async function loadTemplates(searchParams?: SearchParams | Promise<Search
 
   query.delete('categorySlug');
 
-  const apiPath = `/api/v1/template${query.toString() ? `?${query.toString()}` : ''}`;
+  const apiPath = `/api/templates${query.toString() ? `?${query.toString()}` : ''}`;
   const result = await fetchTemplatesByPath(apiPath, TEMPLATE_CACHE_OPTIONS);
 
   return {
