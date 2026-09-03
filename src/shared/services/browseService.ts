@@ -20,7 +20,17 @@ export async function fetchCategoriesByPath(apiPath: string, cacheOptions: Reque
     };
   }
 
-  const payload = await response.json();
+  const payloadText = await response.text().catch(() => '');
+  let payload: any;
+  try {
+    payload = payloadText ? JSON.parse(payloadText) : [];
+  } catch {
+    return {
+      items: [] as any[],
+      errorMessage: 'Failed to load categories: upstream returned non-JSON content.',
+    };
+  }
+
   return {
     items: normalizeList(payload),
     errorMessage: null as string | null,
@@ -37,7 +47,17 @@ export async function fetchTemplatesByPath(apiPath: string, cacheOptions: Reques
     };
   }
 
-  const payload = await response.json();
+  const payloadText = await response.text().catch(() => '');
+  let payload: any;
+  try {
+    payload = payloadText ? JSON.parse(payloadText) : [];
+  } catch {
+    return {
+      items: [] as any[],
+      errorMessage: 'Failed to load templates: upstream returned non-JSON content.',
+    };
+  }
+
   return {
     items: normalizeList(payload),
     errorMessage: null as string | null,

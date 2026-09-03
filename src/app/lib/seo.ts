@@ -63,11 +63,16 @@ export async function fetchCategories(params?: Record<string, string | string[] 
   }
 
   const url = buildHomepageApiUrl(`/api/categories${qp.toString() ? `?${qp.toString()}` : ''}`);
-  const res = await fetch(url, CATEGORY_CACHE_OPTIONS);
-  if (!res.ok) return [];
+  try {
+    const res = await fetch(url, CATEGORY_CACHE_OPTIONS);
+    if (!res.ok) return [];
 
-  const payload = await res.json();
-  return Array.isArray(payload) ? payload : payload?.data ?? payload?.items ?? [];
+    const payloadText = await res.text();
+    const payload = payloadText ? JSON.parse(payloadText) : [];
+    return Array.isArray(payload) ? payload : payload?.data ?? payload?.items ?? [];
+  } catch {
+    return [];
+  }
 }
 
 export function buildSeoMetadata(opts: {

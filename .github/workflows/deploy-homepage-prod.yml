@@ -137,16 +137,44 @@ jobs:
 
       - name: Wait for ECS service to stabilize
         run: |
-          aws ecs wait services-stable \
-            --region "$AWS_REGION" \
-            --cluster "$ECS_CLUSTER" \
-            --services "$ECS_SERVICE"
+          DEADLINE_EPOCH=$(( $(date +%s) + 1800 ))
 
-          aws ecs describe-services \
-            --region "$AWS_REGION" \
-            --cluster "$ECS_CLUSTER" \
-            --services "$ECS_SERVICE" \
-            --query 'services[0].{desired:desiredCount,running:runningCount,pending:pendingCount,taskDef:taskDefinition,status:status}'
+          while true; do
+            SERVICE_STATUS_JSON="$(aws ecs describe-services \
+              --region "$AWS_REGION" \
+              --cluster "$ECS_CLUSTER" \
+              --services "$ECS_SERVICE" \
+              --query 'services[0].{desired:desiredCount,running:runningCount,pending:pendingCount,status:status,taskDef:taskDefinition,rolloutState:deployments[?status==`PRIMARY`]|[0].rolloutState}' \
+              --output json)"
+
+            echo "$SERVICE_STATUS_JSON"
+
+            DESIRED="$(echo "$SERVICE_STATUS_JSON" | jq -r '.desired // 0')"
+            RUNNING="$(echo "$SERVICE_STATUS_JSON" | jq -r '.running // 0')"
+            PENDING="$(echo "$SERVICE_STATUS_JSON" | jq -r '.pending // 0')"
+            STATUS="$(echo "$SERVICE_STATUS_JSON" | jq -r '.status // "UNKNOWN"')"
+            ROLLOUT_STATE="$(echo "$SERVICE_STATUS_JSON" | jq -r '.rolloutState // "UNKNOWN"')"
+
+            if [ "$STATUS" = "ACTIVE" ] && [ "$RUNNING" -ge "$DESIRED" ] && [ "$PENDING" = "0" ] && [ "$ROLLOUT_STATE" = "COMPLETED" ]; then
+              echo "ECS service stabilized."
+              break
+            fi
+
+            if [ "$(date +%s)" -ge "$DEADLINE_EPOCH" ]; then
+              echo "ECS service did not stabilize within 30 minutes."
+              echo "Recent ECS service events:"
+              aws ecs describe-services \
+                --region "$AWS_REGION" \
+                --cluster "$ECS_CLUSTER" \
+                --services "$ECS_SERVICE" \
+                --query 'services[0].events[:15]' \
+                --output json
+              exit 1
+            fi
+
+            echo "Waiting 15s before re-checking service state..."
+            sleep 15
+          done
 
       - name: Resolve homepage ALB DNS
         id: resolve-alb
