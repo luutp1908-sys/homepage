@@ -2,8 +2,6 @@ import React from 'react';
 import Link from 'next/link';
 import { loadCategories } from './loaders';
 
-type Category = { id: string; name: string; slug?: string };
-
 type Props = { searchParams?: { [key: string]: string | string[] | undefined } };
 
 export default async function Categories({ searchParams }: Props) {
