@@ -1,0 +1,187 @@
+name: Deploy Homepage Prod
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-homepage-prod
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-southeast-1
+  ECR_REPOSITORY: homepage
+  ECS_CLUSTER: template-saas-prod-homepage-cluster
+  ECS_SERVICE: template-saas-prod-homepage-monolith
+  CONTAINER_NAME: homepage
+
+jobs:
+  deploy:
+    name: Build Push and Deploy
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Compute image tag
+        run: |
+          SHORT_SHA="${GITHUB_SHA::12}"
+          IMAGE_TAG="${GITHUB_RUN_NUMBER}-${SHORT_SHA}"
+          IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${IMAGE_TAG}"
+
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> "$GITHUB_ENV"
+          echo "IMAGE_URI=${IMAGE_URI}" >> "$GITHUB_ENV"
+
+          echo "Image tag: ${IMAGE_TAG}"
+          echo "Image URI: ${IMAGE_URI}"
+
+      - name: Build and push image (AMD64)
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --provenance false \
+            -t "$IMAGE_URI" \
+            --push \
+            .
+
+      - name: Register new task definition revision
+        run: |
+          SERVICE_JSON="$(aws ecs describe-services \
+            --region "$AWS_REGION" \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --output json)"
+
+          CURRENT_TASK_DEFINITION="$(echo "$SERVICE_JSON" | jq -r '.services[0].taskDefinition')"
+
+          if [ -z "$CURRENT_TASK_DEFINITION" ] || [ "$CURRENT_TASK_DEFINITION" = "null" ]; then
+            echo "Unable to determine the current task definition for $ECS_SERVICE."
+            exit 1
+          fi
+
+          TASK_DEFINITION_JSON="$(aws ecs describe-task-definition \
+            --region "$AWS_REGION" \
+            --task-definition "$CURRENT_TASK_DEFINITION" \
+            --output json)"
+
+          TASK_FAMILY="$(echo "$TASK_DEFINITION_JSON" | jq -r '.taskDefinition.family')"
+
+          echo "$TASK_DEFINITION_JSON" | jq \
+            --arg family "$TASK_FAMILY" \
+            --arg image "$IMAGE_URI" \
+            --arg container "$CONTAINER_NAME" \
+            '.taskDefinition
+            | {
+                family: $family,
+                taskRoleArn,
+                executionRoleArn,
+                networkMode,
+                containerDefinitions: (
+                  .containerDefinitions
+                  | map(
+                      if .name == $container then
+                        .image = $image
+                      else
+                        .
+                      end
+                    )
+                ),
+                volumes,
+                placementConstraints,
+                requiresCompatibilities,
+                cpu,
+                memory,
+                runtimePlatform,
+                ephemeralStorage,
+                pidMode,
+                ipcMode,
+                proxyConfiguration
+              }
+            | with_entries(select(.value != null and .value != []))' > homepage-task-def.json
+
+          REGISTERED_TASK_DEFINITION="$(aws ecs register-task-definition \
+            --region "$AWS_REGION" \
+            --cli-input-json file://homepage-task-def.json \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)"
+
+          echo "Registered task definition: $REGISTERED_TASK_DEFINITION"
+
+          aws ecs update-service \
+            --region "$AWS_REGION" \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --task-definition "$REGISTERED_TASK_DEFINITION" \
+            --force-new-deployment >/dev/null
+
+      - name: Wait for ECS service to stabilize
+        run: |
+          aws ecs wait services-stable \
+            --region "$AWS_REGION" \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE"
+
+          aws ecs describe-services \
+            --region "$AWS_REGION" \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --query 'services[0].{desired:desiredCount,running:runningCount,pending:pendingCount,taskDef:taskDefinition,status:status}'
+
+      - name: Resolve homepage ALB DNS
+        id: resolve-alb
+        run: |
+          TARGET_GROUP_ARN="$(aws ecs describe-services \
+            --region "$AWS_REGION" \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --query 'services[0].loadBalancers[0].targetGroupArn' \
+            --output text)"
+
+          LOAD_BALANCER_ARN="$(aws elbv2 describe-target-groups \
+            --region "$AWS_REGION" \
+            --target-group-arns "$TARGET_GROUP_ARN" \
+            --query 'TargetGroups[0].LoadBalancerArns[0]' \
+            --output text)"
+
+          ALB_DNS_NAME="$(aws elbv2 describe-load-balancers \
+            --region "$AWS_REGION" \
+            --load-balancer-arns "$LOAD_BALANCER_ARN" \
+            --query 'LoadBalancers[0].DNSName' \
+            --output text)"
+
+          echo "ALB_DNS_NAME=${ALB_DNS_NAME}" >> "$GITHUB_ENV"
+          echo "alb_dns_name=${ALB_DNS_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke test homepage root
+        run: |
+          HOME_URL="http://${ALB_DNS_NAME}/"
+          HTTP_CODE="$(curl -sS -o /tmp/homepage.html -w "%{http_code}" "$HOME_URL")"
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Homepage smoke test failed: $HOME_URL returned HTTP $HTTP_CODE"
+            cat /tmp/homepage.html || true
+            exit 1
+          fi
+
+          echo "Homepage smoke test passed: $HOME_URL"
