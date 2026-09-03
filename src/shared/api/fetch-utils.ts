@@ -10,6 +10,16 @@ export function getHomepageBaseUrl() {
   return (process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000').replace(/\/+$/, '');
 }
 
+export function getHomepageInternalBaseUrl() {
+  const configured = process.env.HOMEPAGE_INTERNAL_URL;
+  if (configured && configured.trim().length > 0) {
+    return configured.replace(/\/+$/, '');
+  }
+
+  const port = process.env.PORT ?? '3000';
+  return `http://127.0.0.1:${port}`;
+}
+
 export function buildBackendTarget(request: Request, backendPath: string) {
   const search = new URL(request.url).search;
   return `${getBackendBaseUrl()}${backendPath}${search}`;
@@ -17,6 +27,12 @@ export function buildBackendTarget(request: Request, backendPath: string) {
 
 export function buildHomepageApiUrl(path: string) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
+  // Server-side API calls should stay inside the container task network.
+  if (typeof window === 'undefined') {
+    return `${getHomepageInternalBaseUrl()}${normalizedPath}`;
+  }
+
   return `${getHomepageBaseUrl()}${normalizedPath}`;
 }
 
