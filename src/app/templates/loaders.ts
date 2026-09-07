@@ -78,6 +78,7 @@ export async function loadTemplates(searchParams?: SearchParams | Promise<Search
   query.delete('categorySlug');
 
   const apiPath = `/api/templates${query.toString() ? `?${query.toString()}` : ''}`;
+  console.log('[DEBUG][loadTemplates] apiPath', apiPath);
   const result = await fetchTemplatesByPath(apiPath, TEMPLATE_CACHE_OPTIONS);
 
   return {

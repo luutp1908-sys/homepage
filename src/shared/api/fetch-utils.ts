@@ -17,7 +17,7 @@ export function getHomepageInternalBaseUrl() {
   }
 
   const port = process.env.PORT ?? '3000';
-  return `http://127.0.0.1:${port}`;
+  return `http://localhost:${port}`;
 }
 
 export function buildBackendTarget(request: Request, backendPath: string) {
