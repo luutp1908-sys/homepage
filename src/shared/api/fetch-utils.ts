@@ -43,8 +43,10 @@ export function buildForwardHeaders(request: Request): Record<string, string> {
 
   const auth = request.headers.get('authorization');
   const cookie = request.headers.get('cookie');
+  const idempotencyKey = request.headers.get('idempotency-key');
   if (auth) headers.authorization = auth;
   if (cookie) headers.cookie = cookie;
+  if (idempotencyKey) headers['idempotency-key'] = idempotencyKey;
 
   return headers;
 }
